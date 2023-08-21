@@ -1,9 +1,11 @@
 import requests
 from dotenv import load_dotenv
 import os
+from team import Team
 
 
 manager_id = 4361245
+finn_id = 4160523
 
 
 def main():
@@ -12,8 +14,9 @@ def main():
 
     session = init_session()
 
-    current_team = session.get(f'https://fantasy.premierleague.com/api/my-team/{manager_id}/')
-    print(current_team.json())
+    my_team = Team(session, manager_id)
+    # my_team = Team(session, finn_id, gw_id=2)
+    print([i.prem_team for i in my_team.players])
 
 
 def init_session():
@@ -22,18 +25,11 @@ def init_session():
 
     load_dotenv()
 
-    # initialize session
-    session = requests.session()
-
-    url = 'https://users.premierleague.com/accounts/login/'
-    payload = {
-        'login': os.environ.get('FPL_USR'),
-        'password': os.environ.get('FPL_PSW'),
-        'redirect_uri': 'https://fantasy.premierleague.com/',
-        'app': 'plfpl-web'
+    headers = {
+        'cookie': os.environ.get('COOKIE')
     }
-    r = session.post(url, data=payload)
-    print(r.status_code)
+    session = requests.session()
+    session.headers.update(headers)
 
     return session
 
