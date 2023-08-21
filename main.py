@@ -5,7 +5,6 @@ from team import Team
 
 
 manager_id = 4361245
-finn_id = 4160523
 
 
 def main():
