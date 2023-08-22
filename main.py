@@ -1,7 +1,6 @@
-import requests
-from dotenv import load_dotenv
 import os
-from team import Team
+from manager import Manager
+from user import User
 
 
 manager_id = 4361245
@@ -11,26 +10,13 @@ def main():
 
     """Entrypoint for FPL tracker."""
 
-    session = init_session()
+    me = User(manager_id)
+    print([i.prem_team for i in me.current_team.players])
 
-    my_team = Team(session, manager_id)
-    # my_team = Team(session, finn_id, gw_id=2)
-    print([i.prem_team for i in my_team.players])
-
-
-def init_session():
-
-    """Initialize a session to get login cookies."""
-
-    load_dotenv()
-
-    headers = {
-        'cookie': os.environ.get('COOKIE')
-    }
-    session = requests.session()
-    session.headers.update(headers)
-
-    return session
+    dad = Manager(os.environ.get('DAD_ID'))
+    print(dad.current_team.bank_balance)
+    print([i.league_name for i in dad.classic_leagues])
+    print([dad.get_rank_in_league(i) for i in dad.classic_leagues])
 
 
 if __name__ == '__main__':

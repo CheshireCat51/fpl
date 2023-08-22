@@ -1,10 +1,10 @@
-from bootstrap import Bootstrap
+import utils
 
 
-class Gameweek:
+class Bootstrap:
 
-    def __init__(self): 
-        pass
+    session = utils.init_session()
+    summary = session.get('https://fantasy.premierleague.com/api/bootstrap-static/').json()
 
     def get_current_gw_id():
 

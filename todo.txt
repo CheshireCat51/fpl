@@ -1,0 +1,8 @@
+Hierachy:
+
+Manager:
+    - Team:
+        - Player
+    - Leagues
+
+Gameweek
