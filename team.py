@@ -4,9 +4,9 @@ from bootstrap import Bootstrap
 
 class Team:
 
-    def __init__(self, manager_id: int, gw_id: int = Bootstrap.get_current_gw_id(), is_user: bool = False):
+    def __init__(self, manager_id: int, gw_id: int = Bootstrap.current_gw_id, is_user: bool = False):
 
-        if is_user and gw_id == Bootstrap.get_current_gw_id():
+        if is_user and gw_id == Bootstrap.current_gw_id:
             team_summary = Bootstrap.session.get(f'https://fantasy.premierleague.com/api/my-team/{manager_id}/').json()
             transfers_key = 'transfers'
         else:

@@ -3,9 +3,6 @@ import utils
 
 class Bootstrap:
 
-    session = utils.init_session()
-    summary = session.get('https://fantasy.premierleague.com/api/bootstrap-static/').json()
-
     def get_current_gw_id():
 
         current_gw_id = 0
@@ -18,3 +15,7 @@ class Bootstrap:
                 current_gw_id -= 1
                 
         return current_gw_id
+
+    session = utils.init_session()
+    summary = session.get('https://fantasy.premierleague.com/api/bootstrap-static/').json()
+    current_gw_id = get_current_gw_id()
