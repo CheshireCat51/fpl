@@ -3,6 +3,7 @@ Hierachy:
 Manager:
     - Team:
         - Player
-    - Leagues
+        
+League
 
 Gameweek
