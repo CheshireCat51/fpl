@@ -5,6 +5,8 @@ class Bootstrap:
 
     session = utils.init_session()
     summary = session.get('https://fantasy.premierleague.com/api/bootstrap-static/').json()
+    all_prem_teams = summary['teams']
+    all_players = summary['elements']
 
     def get_current_gw_id():
 
@@ -18,3 +20,14 @@ class Bootstrap:
                 current_gw_id -= 1
                 
         return current_gw_id
+    
+    def get_prem_team_by_id(prem_team_id):
+
+        selected_prem_team = None
+
+        for prem_team in Bootstrap.all_prem_teams:
+            if prem_team['id'] == prem_team_id:
+                selected_prem_team = prem_team
+                break
+
+        return selected_prem_team

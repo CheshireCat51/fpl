@@ -35,33 +35,51 @@ class League():
         num_managers_above_owning = 0
         user_rank = League.get_manager_rank(self, user_id)
         for manager in self.league_summary['standings']['results']:
-
-            if manager['id'] != user_id:
                     
-                players = Team(manager['entry']).get_players()
-                for selection in players:
-                    if selection.player_id == player.player_id:
-                        num_managers_owning += 1
+            players = Team(manager['entry']).get_players()
+            for selection in players:
+                if selection.player_id == player.player_id:
+                    num_managers_owning += 1
 
-                        if manager['rank'] > user_rank:
-                            num_managers_below_owning += 1
+                    if manager['rank'] > user_rank:
+                        num_managers_below_owning += 1
 
-                        else:
-                            num_managers_above_owning += 1
-                    
-                        break
+                    elif manager['rank'] < user_rank:
+                        num_managers_above_owning += 1
+                
+                    break
 
-        return ((num_managers_owning/num_managers), (num_managers_above_owning/num_managers), (num_managers_below_owning/num_managers))
+        def catch_zero_div_error(numerator, denominator):
+            try:
+                assert denominator != 0
+            except AssertionError:
+                ownership = 'no managers'
+            else:
+                ownership = numerator/denominator
+            return ownership
+        
+        total_ownership = num_managers_owning/num_managers
+        above_ownership = catch_zero_div_error(num_managers_above_owning, user_rank-1)
+        below_ownership = catch_zero_div_error(num_managers_below_owning, num_managers-user_rank)
+
+        return {
+            'total': total_ownership,
+            'above': above_ownership, 
+            'below': below_ownership
+        }
     
     def get_manager_rank(self, manager_id: int) -> int:
 
         """Returns given Manager's rank in League."""
 
-        rank = -1
+        rank = None
 
         for manager in self.league_summary['standings']['results']:
             if manager['entry'] == manager_id:
                 rank = manager['rank']
                 break
+
+        if rank == None:
+            raise Exception(f'Manager id not found in {self.league_name}.')
 
         return rank
