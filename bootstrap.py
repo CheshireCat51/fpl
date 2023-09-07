@@ -31,3 +31,16 @@ class Bootstrap:
                 break
 
         return selected_prem_team
+    
+    def get_player_by_id(player_id):
+
+        selected_player = None
+
+        for player in Bootstrap.all_players:
+            if player['element'] == player_id:
+                selected_player = player
+                break
+
+        return selected_player
+    
+

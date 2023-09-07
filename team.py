@@ -13,6 +13,7 @@ class Team:
             team_summary = Bootstrap.session.get(f'https://fantasy.premierleague.com/api/entry/{manager_id}/event/{gw_id}/picks/').json()
             transfers_key = 'entry_history'
 
+        self.is_user = is_user
         self.team_summary = team_summary
         self.transfers = team_summary[transfers_key]
 
@@ -31,7 +32,14 @@ class Team:
 
         """Returns value of team in given GW."""
 
-        return self.transfers['value']/10
+        team_value = 0
+
+        if self.is_user:
+            team_value = self.transfers['value']/10
+        else:
+            team_value = (self.transfers['value'] - self.transfers['bank'])/10
+
+        return team_value
     
     def get_bank_balance(self):
 

@@ -36,12 +36,17 @@ class Player:
 
         fixtures = Bootstrap.session.get(f'https://fantasy.premierleague.com/api/fixtures?team={self.prem_team_id}').json()
 
-        opposition_difficulty: {}
-        for i in range(1, num_fixtures+1):
-            if fixtures['event'] == Bootstrap.get_current_gw_id()+i:
-                print(fixtures)
+        opposition_difficulty = {}
+        for i in range(num_fixtures+1):
+            for fixture in fixtures:
+                if fixture['event'] == Bootstrap.get_current_gw_id()+i and fixture['finished'] == False:
+                    if fixture['team_a'] == self.prem_team_id:
+                        opposition_difficulty[Bootstrap.get_prem_team_by_id(fixture['team_h'])['name']] = fixture['team_a_difficulty']
+                    else:
+                        opposition_difficulty[Bootstrap.get_prem_team_by_id(fixture['team_a'])['name']] = fixture['team_h_difficulty']
+                    break
 
-        return fixtures
+        return opposition_difficulty
 
     def get_stats(self):
 
@@ -58,15 +63,4 @@ class Player:
             stats[key]['xGC'] = self.player_summary[f'expected_goals_conceded{suffix}']
 
         return stats
-    
-    def get_player_by_id(player_id):
-
-        selected_player = None
-
-        for player in Bootstrap.all_players:
-            if player['element'] == player_id:
-                selected_player = Player(player_id)
-                break
-
-        return selected_player
         
