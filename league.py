@@ -3,7 +3,7 @@ from player import Player
 from team import Team
 
 
-class League():
+class League:
 
     def __init__(self, league_id: int):
         self.league_id = league_id

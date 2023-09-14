@@ -10,7 +10,7 @@ class Team:
             team_summary = Bootstrap.session.get(f'https://fantasy.premierleague.com/api/my-team/{manager_id}/').json()
             transfers_key = 'transfers'
         else:
-            team_summary = Bootstrap.session.get(f'https://fantasy.premierleague.com/api/entry/{manager_id}/event/{gw_id}/picks/').json()
+            team_summary = Bootstrap.session.get(f'https://fantasy.premierleague.com/api/entry/{manager_id}/event/{gw_id-1}/picks/').json()
             transfers_key = 'entry_history'
 
         self.is_user = is_user
@@ -46,3 +46,17 @@ class Team:
         """Returns bank balance in given GW."""
 
         return self.transfers['bank']/10
+    
+    def get_expected_points_for_gw(self, gw_id: int = Bootstrap.get_current_gw_id()):
+
+        """Sum of expected points of the starting 11 of the given team."""
+
+        total_xp = 0
+
+        for player in self.get_players():
+            for pick in self.team_summary['picks']:
+                if pick['element'] == player.player_id:
+                    total_xp += player.get_expected_points(gw_id)*pick['multiplier']
+                    break
+
+        return total_xp

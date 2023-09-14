@@ -9,10 +9,22 @@ def init_session():
 
     load_dotenv()
 
-    headers = {
-        'cookie': os.environ.get('COOKIE')
+    url = 'https://users.premierleague.com/accounts/login/'
+
+    payload = {
+        'password': os.environ.get('FPL_PWD'),
+        'login': 'georgejpowell51@gmail.com',
+        'redirect_uri': 'https://fantasy.premierleague.com/a/login',
+        'app': 'plfpl-web'
     }
+
     session = requests.session()
-    session.headers.update(headers)
+    session.post(url, data=payload)
+
+    # headers = {
+    #     'cookie': os.environ.get('COOKIE')
+    # }
+    
+    # session.headers.update(headers)
 
     return session
