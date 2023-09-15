@@ -18,7 +18,9 @@ def main():
     """Entrypoint for FPL tracker."""
 
     olsen = Player(53)
-    print(olsen.get_expected_mins())
+    print(olsen.get_fixture(4))
+    print(olsen.get_next_x_fixtures())
+    # print(olsen.get_expected_mins())
     # solve_gk_problem(8.5)
 
     # load_dotenv()

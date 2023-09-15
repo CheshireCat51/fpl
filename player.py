@@ -35,19 +35,34 @@ class Player:
     
     def get_next_x_fixtures(self, num_fixtures: int = 6):
 
-        fixtures = Bootstrap.session.get(f'https://fantasy.premierleague.com/api/fixtures?team={self.prem_team_id}').json()
-
-        opposition_difficulty = {}
+        fixture_difficulties = {}
         for i in range(num_fixtures+1):
-            for fixture in fixtures:
-                if fixture['event'] == Bootstrap.get_current_gw_id()+i and fixture['finished'] == False:
-                    if fixture['team_a'] == self.prem_team_id:
-                        opposition_difficulty[Bootstrap.get_prem_team_by_id(fixture['team_h'])['name']] = fixture['team_a_difficulty']
-                    else:
-                        opposition_difficulty[Bootstrap.get_prem_team_by_id(fixture['team_a'])['name']] = fixture['team_h_difficulty']
-                    break
+            gw = Bootstrap.get_current_gw_id()+i
+            fixture_difficulties[gw] = self.get_fixture(gw)
 
-        return opposition_difficulty
+        return fixture_difficulties
+    
+    def get_fixture(self, gw_id: int):
+
+        """Get the fixture and difficulty for the given GW."""
+
+        fixture = Bootstrap.session.get(f'https://fantasy.premierleague.com/api/fixtures?team={self.prem_team_id}&event={gw_id}').json()[0]
+        fixture_difficulty = {}
+
+        if fixture['team_a'] == self.prem_team_id: # if player's team are away team...
+            fixture_difficulty = {
+                'id': fixture['team_h'],
+                'name': Bootstrap.get_prem_team_by_id(fixture['team_h'])['name'],
+                'difficulty': fixture['team_a_difficulty']
+            }
+        else: # else if player's team are home team...
+            fixture_difficulty = {
+                'id': fixture['team_a'],
+                'name': Bootstrap.get_prem_team_by_id(fixture['team_a'])['name'],
+                'difficulty': fixture['team_h_difficulty']
+            }
+        
+        return fixture_difficulty
 
     def get_stats(self):
 
