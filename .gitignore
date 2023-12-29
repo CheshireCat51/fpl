@@ -161,3 +161,5 @@ cython_debug/
 
 # CBC solver
 solver/
+*.mps
+solution.txt

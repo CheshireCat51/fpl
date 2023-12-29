@@ -17,21 +17,23 @@ def main():
 
     """Entrypoint for FPL tracker."""
 
-    olsen = Player(53)
-    print(olsen.get_fixture(4))
-    print(olsen.get_next_x_fixtures())
-    # print(olsen.get_expected_mins())
-    # solve_gk_problem(8.5)
+    # haaland = Player(355)
+    # print(Bootstrap.get_current_gw_id())
+    # print(haaland.get_expected_points(17))
 
-    # load_dotenv()
+    # for key, val in haaland.get_next_x_fixtures().items():
+    #     print(val)
+    #     print(haaland.get_expected_points(key))
+    #     print('\n')
 
-    # me = Manager(manager_id)
-    # dad = Manager(os.environ.get('DAD_ID'))
-    # dad_players = dad.current_team.get_players()
+    load_dotenv()
 
-    # gw = 4
-    # print('Dad', dad.current_team.get_expected_points_for_gw(gw))
-    # print('Me', me.current_team.get_expected_points_for_gw(gw))
+    me = Manager(manager_id)
+    dad = Manager(os.environ.get('DAD_ID'))
+
+    gw = 17
+    print('Dad', dad.current_team.get_expected_points_for_gw())
+    print('Me:', me.current_team.get_expected_points_for_gw())
 
 
 def solve_gk_problem(budget: float):

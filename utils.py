@@ -28,3 +28,35 @@ def init_session():
     # session.headers.update(headers)
 
     return session
+
+
+fpl_points_system = {
+    'GKP': {
+        'Clean Sheet': 4,
+        'Goal Scored': 6,
+        'Save (per 3 saves)': 1,
+        'Penalty Save': 5,
+        '2 Goals Conceded': -1,
+    },
+    'DEF': {
+        'Clean Sheet': 4,
+        'Goal Scored': 6,
+        '2 Goals Conceded': -1,
+    },
+    'MID': {
+        'Goal Scored': 5,
+        'Clean Sheet': 1
+    },
+    'FWD': {
+        'Goal Scored': 4,
+    },
+    'Other': {
+        '< 60 mins': 1,
+        '>= 60 mins': 2,
+        'Assist': 3,
+        'Yellow Card': -1,
+        'Red Card': -3,
+        'Own Goal': -2,
+        'Penalty Miss': -2
+    }
+}

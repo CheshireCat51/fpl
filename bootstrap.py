@@ -38,7 +38,7 @@ class Bootstrap:
         selected_player = None
 
         for player in Bootstrap.all_players:
-            if player['element'] == player_id:
+            if player['id'] == player_id:
                 selected_player = player
                 break
 
