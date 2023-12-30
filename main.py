@@ -29,10 +29,10 @@ def main():
     load_dotenv()
 
     me = Manager(manager_id)
-    dad = Manager(os.environ.get('DAD_ID'))
+    # dad = Manager(os.environ.get('DAD_ID'))
 
-    gw = 17
-    print('Dad', dad.current_team.get_expected_points_for_gw())
+    # gw = 17
+    # print('Dad', dad.current_team.get_expected_points_for_gw())
     print('Me:', me.current_team.get_expected_points_for_gw())
 
 

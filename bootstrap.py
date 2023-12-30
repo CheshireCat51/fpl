@@ -15,9 +15,12 @@ class Bootstrap:
 
         for event in Bootstrap.summary['events']:
             current_gw_id = event['id']
-            if event['is_current'] == True and event['finished'] == False:
-                break
-            elif event['is_next'] == True:
+            # if event['is_current'] == True and event['finished'] == False:
+            #     break
+            # elif event['is_previous'] == True and event['finished'] == True:
+            #     break
+            if event['is_current'] == True:
+                print(current_gw_id)
                 break
                 
         return current_gw_id
