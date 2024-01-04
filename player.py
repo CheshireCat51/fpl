@@ -1,5 +1,6 @@
 from bootstrap import Bootstrap
-from utils import fpl_points_system
+from utils import fpl_points_system, poisson_distribution, normal_distribution
+import math
 import re
 
 
@@ -14,6 +15,7 @@ class Player:
         self.player_id = player_id
         self.first_name = player['first_name']
         self.second_name = player['second_name']
+        self.position = self.find_position()
 
         prem_team = Bootstrap.get_prem_team_by_id(self.player_summary['team'])
         self.prem_team_id = prem_team['id']
@@ -65,6 +67,7 @@ class Player:
         
         return fixture_difficulty
 
+
     def get_stats(self):
 
         stats = {'total': {}, 'per 90': {}}
@@ -74,7 +77,6 @@ class Player:
                 suffix = ''
             else:
                 suffix = '_per_90'
-                stats[key]['xMins'] = self.get_expected_mins() # average mins played per gw
                 stats[key]['clean_sheets'] = self.player_summary[f'clean_sheets{suffix}']
             stats[key]['xG'] = self.player_summary[f'expected_goals{suffix}']
             stats[key]['xA'] = self.player_summary[f'expected_assists{suffix}']
@@ -83,6 +85,7 @@ class Player:
 
         return stats
     
+
     def get_expected_mins(self):
 
         """Calculate expected mins based on mins already played this season and injury status."""
@@ -97,65 +100,86 @@ class Player:
 
         return x_mins
     
+
     def get_expected_points(self, gw_id: int = Bootstrap.get_current_gw_id()):
 
         """Use xG, xA and xGC to calculate xP. Doesn't currently take into account BPS."""
 
-        # stats per 90 mins
+        save_ev = 0
+        defensive_ev = 0
+        attacking_ev = self.get_attacking_returns()
+        mins_ev = self.get_mins_returns()
+
+        if self.position != 'FWD':
+            defensive_ev = self.get_defensive_returns()
+
+        total_ev = save_ev + defensive_ev + attacking_ev + mins_ev
+        
+        return total_ev
+    
+
+    def get_mins_returns(self) -> float:
+
+        """Returns EV due to mins played. Assumes minutes follow Normal distribution. WORK OUT HOW TO GET STD."""
+
+        x_mins = self.get_expected_mins()
+
+        if x_mins > 0:
+            less_than_60_ev = normal_distribution(x_mins, 12, (-1000, 60))*fpl_points_system['Other']['< 60 mins']
+            more_than_60_ev = normal_distribution(x_mins, 12, (60, 1000))*fpl_points_system['Other']['>= 60 mins']
+            return less_than_60_ev + more_than_60_ev
+        else:
+            return 0
+
+
+    def get_attacking_returns(self) -> float:
+
+        """Returns EV due to attacking returns. Assumes Player plays 90 mins."""
+
         stats_per_90 = self.get_stats()['per 90']
 
-        if stats_per_90['xMins'] != 0:
-            try:
-                # clean_sheet_probability = min(1, 1/stats_per_90['xGC'])
-                clean_sheet_probability = min(1, stats_per_90['clean_sheets'])
-            except ZeroDivisionError:
-                clean_sheet_probability = 0
+        goal_ev = fpl_points_system[self.position]['Goal Scored']*stats_per_90['xG']
+        assist_ev = fpl_points_system['Other']['Assist']*stats_per_90['xA']
 
-            clean_sheet_pts = 0
-            conceed_pts = 0
-            save_pts = 0
-            goal_pts = 0
-            assist_pts = 0
-            mins_pts = 0
+        return goal_ev + assist_ev
+    
 
-            if self.find_position() == 'GKP':
-                clean_sheet_pts = fpl_points_system['GKP']['Clean Sheet']*clean_sheet_probability
-                conceed_pts = fpl_points_system['GKP']['2 Goals Conceded']*(stats_per_90['xGC']/2)
-                goal_pts = fpl_points_system['GKP']['Goal Scored']*stats_per_90['xG']
-            elif self.find_position() == 'DEF':
-                clean_sheet_pts = fpl_points_system['DEF']['Clean Sheet']*clean_sheet_probability
-                conceed_pts = fpl_points_system['DEF']['2 Goals Conceded']*(stats_per_90['xGC']/2)
-                goal_pts = fpl_points_system['DEF']['Goal Scored']*stats_per_90['xG']
-            elif self.find_position() == 'MID':
-                clean_sheet_pts = fpl_points_system['MID']['Clean Sheet']*clean_sheet_probability
-                goal_pts = fpl_points_system['MID']['Goal Scored']*stats_per_90['xG']
-            elif self.find_position() == 'FWD':
-                goal_pts = fpl_points_system['FWD']['Goal Scored']*stats_per_90['xG']
+    def get_defensive_returns(self) -> float:
 
-            # clean sheet points cap
-            if clean_sheet_pts > 4 and self.find_position() in ['GKP', 'DEF']:
-                clean_sheet_pts = 4
-            elif clean_sheet_pts > 1 and self.find_position() == 'MID':
-                clean_sheet_pts = 1
+        """Returns EV due to defensive returns. Assumes goals follow Poisson distribution."""
 
-            assist_pts = fpl_points_system['Other']['Assist']*stats_per_90['xA']
-            
-            if stats_per_90['xMins'] >= 60:
-                mins_pts = fpl_points_system['Other']['>= 60 mins']
-            elif stats_per_90['xMins'] != 0:
-                mins_pts = (1/30)*stats_per_90['xMins']
+        defensive_ev = 0
 
-            opposition_difficulty = self.get_fixture(gw_id)
+        # Where i represents goals conceded...
+        for i in range(0, 11):
+            prob_concede_i_goals = poisson_distribution(i, 1.9)
+            if i == 0:
+                defensive_ev += prob_concede_i_goals*fpl_points_system[self.position]['Clean Sheet']
+            else:
+                try:
+                    defensive_ev += prob_concede_i_goals*fpl_points_system[self.position]['2 Goals Conceded']*(math.floor(i/2))
+                except KeyError:
+                    print('Midfielder. No penalty for 2 or more goals conceded.')
+                    pass
 
-            # print(clean_sheet_pts)
-            # print(conceed_pts)
-            # print(save_pts)
-            # print(goal_pts)
-            # print(assist_pts)
-            # print(mins_pts)
-            total_pts = (clean_sheet_pts + conceed_pts + save_pts + goal_pts + assist_pts + mins_pts)*(1+(5-opposition_difficulty['difficulty'])/10)*(stats_per_90['xMins']/90)
+        return defensive_ev
+    
+
+    def get_rank_gain_per_point_scored(self):
         
-        else:
-            total_pts = 0
+        """Returns places gained by Manager for each point scored by Player.
+        Only relevant for Players owned by Manager."""
+
+        self.ownership
+
+        return 
+
+
+    def get_rank_loss_per_point_scored(self):
         
-        return total_pts
+        """Returns places lost by Manager for each point scored by Player.
+        Only relevant for Players not owned by Manager."""
+
+        self.ownership
+
+        return

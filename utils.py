@@ -1,6 +1,8 @@
 import requests
 import os
 from dotenv import load_dotenv
+import math
+from scipy.integrate import quad
 
 
 def init_session():
@@ -28,6 +30,26 @@ def init_session():
     # session.headers.update(headers)
 
     return session
+
+
+def poisson_distribution(k: int, lam: float):
+
+    """Returns probability of k events taking place according to Poisson distribution with mean lam."""
+
+    return ((lam**k)*math.e**(-lam))/math.factorial(k)
+
+
+def normal_distribution(mu: float, sigma: float, limits: tuple):
+
+    """Returns probability of event outcome falling within given limits according to Normal distribution with mean mu and std sigma."""
+
+    normal_prob_density = lambda x: (1/(sigma*math.sqrt(2*math.pi)))*math.e**(-(1/2)*((x-mu)/sigma)**2)
+
+    return quad(normal_prob_density, limits[0], limits[1])[0]
+
+
+if __name__ == '__main__':
+    print(normal_distribution(70, 6, (-100, 60)))
 
 
 fpl_points_system = {

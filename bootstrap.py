@@ -1,4 +1,3 @@
-import utils
 import requests
 
 
@@ -8,6 +7,7 @@ class Bootstrap:
     summary = session.get('https://fantasy.premierleague.com/api/bootstrap-static/').json()
     all_prem_teams = summary['teams']
     all_players = summary['elements']
+
 
     def get_current_gw_id():
 
@@ -20,11 +20,11 @@ class Bootstrap:
             # elif event['is_previous'] == True and event['finished'] == True:
             #     break
             if event['is_current'] == True:
-                print(current_gw_id)
                 break
                 
         return current_gw_id
     
+
     def get_prem_team_by_id(prem_team_id):
 
         selected_prem_team = None
@@ -35,6 +35,7 @@ class Bootstrap:
                 break
 
         return selected_prem_team
+    
     
     def get_player_by_id(player_id):
 
