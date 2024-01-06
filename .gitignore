@@ -165,4 +165,5 @@ solver/
 solution.txt
 
 # FBRef
-fbref_data*
+*.xlsx
+*.csv
