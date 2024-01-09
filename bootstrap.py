@@ -74,10 +74,17 @@ class Bootstrap:
 
         for player in Bootstrap.all_players:
             player_full_name = player['first_name'] + ' ' + player['second_name']
+            split_name = search_name.split(' ')
             if player_full_name == search_name:
                 selected_player = player
                 break
             elif search_name.lower() in player_full_name.lower():
+                selected_player = player
+                break
+            elif split_name[0] in player_full_name and split_name[1] in player_full_name:
+                selected_player = player
+                break
+            elif search_name == player['web_name']:
                 selected_player = player
                 break
 

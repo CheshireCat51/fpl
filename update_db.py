@@ -8,6 +8,7 @@ from manager import Manager
 from dotenv import load_dotenv
 import os
 from utils import format_deadline_str
+from player import Player
 
 
 fbref_host = 'https://fbref.com'
@@ -63,26 +64,21 @@ player_columns_map = {
     'npxG.1': 'npxG_per_90'
 }
 
-player_gameweek_columns_map = [
-    'player_id',
-    'gameweek_id',
-    'opponent_id',
-    'started',
-    'minutes_played',
-    'goals',
-    'assists',
-    'penalty_goals',
-    'penalty_attempts',
-    'yellow_cards',
-    'red_cards',
-    'xG',
-    'npxG',
-    'xA',
-    'progressive_carries',
-    'progressive_passes',
-    'projected_points',
-    'points'
-]
+player_gameweek_columns_map = {
+    'Round': 'gameweek_id',
+    #'Venue': 'venue',
+    'Start': 'started',
+    'Min': 'minutes_played',
+    'Gls': 'goals',
+    'Ast': 'assists',
+    'PK': 'penalty_goals',
+    'PKatt': 'penalty_attempts',
+    'CrdY': 'yellow_cards',
+    'CrdR': 'red_cards',
+    'xG': 'xG',
+    'xAG': 'xA',
+    'npxG': 'npxG',
+}
 
 
 def main():
@@ -90,16 +86,16 @@ def main():
     load_dotenv()
     me = Manager(os.environ.get('ME'))
     gameweeks_df = get_gameweek_data(me)
-    print(gameweeks_df)
+    #print(gameweeks_df)
     my_team_df = get_my_team_data(me)
-    print(my_team_df)
+    #print(my_team_df)
 
     # Write squads to excel
     squads_url = '/en/comps/9/Premier-League-Stats'
     squads_df, squad_rows = scrape_html(squads_url, 'stats_squads_standard_for', 'team')
     squads_df = trim_df(squad_columns_map, squads_df)
     squads_df['id'] = squads_df.apply(get_squad_id, axis=1)
-    print(squads_df)
+    #print(squads_df)
 
     # Join elevenify data to fbref squad data
     team_strengths_df = get_elevenify_data()
@@ -119,25 +115,37 @@ def main():
         player_df = trim_df(player_columns_map, player_df)
         player_df.insert(0, 'squad_id', squad_id)
         player_df['id'] = player_df.apply(get_player_id, axis=1)
+        player_df['position'] = player_df.apply(get_player_position, axis=1)
         players_df = pd.concat([players_df, player_df], axis=0)
 
-        # for player in player_rows:
-        #     # Write player's last 5 games to excel
-        #     player_gameweek_df, player_gameweek_rows = scrape_html(player, 'last_5_matchlogs')
-        #     player_gameweek_df['player_id'] = player_gameweek_df.apply(get_player_id, axis=1)
-        #     player_gameweeks_df = pd.concat([player_gameweeks_df, player_gameweek_df], axis=0)
+        j = 0
+        for player in player_rows:
+            # Write player's last 5 games to excel
+            fpl_player = Player(get_player_id(player_df.loc[j]))
+            if fpl_player.position != 'GKP':
+                player_gameweek_df, player_gameweek_rows = scrape_html(player, 'last_5_matchlogs')
+                player_gameweek_df = trim_df(player_gameweek_columns_map, player_gameweek_df)
+                player_gameweek_df.insert(0, 'player_id', fpl_player.player_id)
+                player_gameweek_df['started'] = player_gameweek_df.apply(format_started_col, axis=1)
+                player_gameweek_df['gameweek_id'] = player_gameweek_df.apply(get_gameweek_id, axis=1)
+                #player_gameweek_df['opponent_id'] = player_gameweek_df.apply(lambda row: fpl_player.get_fixture(row['gameweek_id'])['id'], axis=1)
+                player_gameweek_df['projected_points'] = player_gameweek_df.apply(lambda row: fpl_player.get_expected_points(row['gameweek_id']), axis=1)
+                player_gameweek_df['points_scored'] = player_gameweek_df.apply(lambda row: fpl_player.get_points_scored(row['gameweek_id']), axis=1)
+                player_gameweeks_df = pd.concat([player_gameweeks_df, player_gameweek_df], axis=0)
 
-        #     if player.text == 'Ben White':
-        #         break
+            # if player.text == 'Ben White':
+            #     break
 
-        time.sleep(10)
+            j += 1
+
+            time.sleep(5)
 
         i += 1
         #break
 
-    print(squad_gameweeks_df)
-    print(players_df)
-    print(player_gameweeks_df)
+    # print(squad_gameweeks_df)
+    # print(players_df)
+    # print(player_gameweeks_df)
 
     gameweeks_df.to_excel('gameweeks.xlsx')
     my_team_df.to_excel('my_team.xlsx')
@@ -151,7 +159,7 @@ def main():
 
 def trim_df(column_map, df: pd.DataFrame):
 
-    """Returns df after trimmed."""
+    """Returns df w/ only desired columns and renamed to match db schema."""
 
     selected_columns = [i for i in column_map.keys()]
     df = df[selected_columns]
@@ -186,12 +194,51 @@ def get_player_id(row):
 
     """Returns player id from FPL API for given row."""
 
+    try:
+        return find_player(row).player_id
+    except AttributeError:
+        return None
+    
+
+def get_player_position(row):
+
+    """Returns player position from FPL API for given row."""
+
+    try:
+        return find_player(row).position
+    except:
+        return None
+
+
+def find_player(row) -> Player:
+
+    """Find player in FPL API."""
+
     player = Bootstrap.get_player_by_name(row['name'])
 
     if player == None:
         return None
     else:
-        return player['id']
+        return Player(player['id'])
+
+
+def get_gameweek_id(row):
+
+    """Returns gameweek id from FBRef table."""
+
+    round_str = row['gameweek_id']
+
+    return round_str.split(' ')[1]
+
+
+def format_started_col(row):
+
+    """Returns correctly formated started column for DB."""
+
+    if 'Y' in row['started']:
+        return 1
+    else:
+        return 0
 
 
 def get_url_from_anchor(element):
@@ -293,7 +340,7 @@ def get_my_team_data(me: Manager):
             player_name,
             player.position,
             player.prem_team_id,
-            player.get_fixture(Bootstrap.get_current_gw_id())['id'],
+            player.get_fixture(Bootstrap.get_current_gw_id()+1)['id'],
             is_captain,
             is_vice_captain,
             None,
@@ -312,50 +359,3 @@ def get_my_team_data(me: Manager):
 
 if __name__ == '__main__':
     main()
-
-
-# player_columns = ['name',
-#                 'squad_id',
-#                 'squad_abbreviation',
-#                 'position',
-#                 'matches_played',
-#                 'minutes_played',
-#                 'goals',
-#                 'assists',
-#                 'penalty_goals',
-#                 'penalty_attempts',
-#                 'yellow_cards',
-#                 'red_cards',
-#                 'xG',
-#                 'npxG',
-#                 'xA',
-#                 'progressive_carries',
-#                 'progressive_passes',
-#                 'goals_per_90',
-#                 'assists_per_90',
-#                 'xG_per_90',
-#                 'xA_per_90',
-#                 'effective_ownership',
-#                 'next_opponent_id',
-#                 'next_opponent_abbreviation',
-#                 'chance_of_playing_this_gameweek',
-#                 'projected_points']
-
-# player_gameweek_columns=['player_id',
-#                          'gameweek_id',
-#                          'opponent_id',
-#                          'started',
-#                          'minutes_played',
-#                          'goals',
-#                          'assists',
-#                          'penalty_goals',
-#                          'penalty_attempts',
-#                          'yellow_cards',
-#                          'red_cards',
-#                          'xG',
-#                          'npxG',
-#                          'xA',
-#                          'progressive_carries',
-#                          'progressive_passes',
-#                          'projected_points',
-#                          'points']

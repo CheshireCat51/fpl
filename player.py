@@ -2,6 +2,7 @@ from bootstrap import Bootstrap
 from utils import fpl_points_system, poisson_distribution, normal_distribution
 import math
 import crud
+import requests
 
 
 class Player:
@@ -23,6 +24,8 @@ class Player:
         
         self.ownership = player['selected_by_percent']
         self.current_price = player['now_cost']
+
+        self.player_details = requests.get(f'https://fantasy.premierleague.com/api/element-summary/{self.player_id}/').json()
     
 
     def find_position(self) -> str:
@@ -49,7 +52,7 @@ class Player:
         return fixture_difficulties
     
 
-    def get_fixture(self, gw_id: int = Bootstrap.get_current_gw_id()):
+    def get_fixture(self, gw_id: int = Bootstrap.get_current_gw_id()+1):
 
         """Get the fixture and difficulty for the given GW."""
 
@@ -59,14 +62,12 @@ class Player:
         if fixture['team_a'] == self.prem_team_id: # if player's team are away team...
             fixture_difficulty = {
                 'id': fixture['team_h'],
-                'name': Bootstrap.get_prem_team_by_id(fixture['team_h'])['name'],
-                'difficulty': fixture['team_a_difficulty']
+                'name': Bootstrap.get_prem_team_by_id(fixture['team_h'])['name']
             }
         else: # else if player's team are home team...
             fixture_difficulty = {
                 'id': fixture['team_a'],
-                'name': Bootstrap.get_prem_team_by_id(fixture['team_a'])['name'],
-                'difficulty': fixture['team_h_difficulty']
+                'name': Bootstrap.get_prem_team_by_id(fixture['team_a'])['name']
             }
         
         return fixture_difficulty
@@ -90,12 +91,21 @@ class Player:
         return stats
     
 
+    def get_points_scored(self, gw_id: int = Bootstrap.get_current_gw_id()-1):
+
+        """Returns points scored in given gw."""
+
+        for event in self.player_details['history']:
+            if event['round'] == int(gw_id):
+                return event['total_points']
+    
+
     def get_expected_mins(self):
 
         """Calculate expected mins based on mins already played this season and injury status."""
 
         if self.player_summary['status'] == 'a': # a = available
-            x_mins = self.player_summary['minutes']/Bootstrap.get_current_gw_id()
+            x_mins = self.player_summary['minutes']/(Bootstrap.get_current_gw_id()+1)
         elif self.player_summary['status'] == 'd': # d = doubt
             chance_of_playing = self.player_summary['chance_of_playing_this_round']
             x_mins = (self.player_summary['minutes']/Bootstrap.get_current_gw_id()) * int(chance_of_playing)/100
@@ -105,7 +115,7 @@ class Player:
         return x_mins
     
 
-    def get_expected_points(self, gw_id: int = Bootstrap.get_current_gw_id()):
+    def get_expected_points(self, gw_id: int = Bootstrap.get_current_gw_id()+1):
 
         """Use xG, xA and xGC to calculate xP. Doesn't currently take into account BPS."""
 
@@ -114,10 +124,13 @@ class Player:
         attacking_ev = self.get_attacking_returns()
         mins_ev = self.get_mins_returns()
 
-        if self.position != 'FWD':
-            defensive_ev = self.get_defensive_returns()
+        if mins_ev != 0:
+            if self.position != 'FWD':
+                defensive_ev = self.get_defensive_returns()
+            total_ev = save_ev + defensive_ev + attacking_ev + mins_ev
 
-        total_ev = save_ev + defensive_ev + attacking_ev + mins_ev
+        else:
+            total_ev = 0
         
         return total_ev
     
@@ -163,7 +176,7 @@ class Player:
                 try:
                     defensive_ev += prob_concede_i_goals*fpl_points_system[self.position]['2 Goals Conceded']*(math.floor(i/2))
                 except KeyError:
-                    print('Midfielder. No penalty for 2 or more goals conceded.')
+                    # print('Midfielder. No penalty for 2 or more goals conceded.')
                     pass
 
         return defensive_ev
