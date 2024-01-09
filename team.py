@@ -4,6 +4,7 @@ from bootstrap import Bootstrap
 
 class Team:
 
+
     def __init__(self, manager_id: int, gw_id: int = Bootstrap.get_current_gw_id(), is_user: bool = False):
 
         if is_user and gw_id == Bootstrap.get_current_gw_id():
@@ -17,6 +18,7 @@ class Team:
         self.team_summary = team_summary
         self.transfers = team_summary[transfers_key]
 
+
     def get_players(self) -> list[Player]:
 
         """Returns a list of Player objects including all members of the team in the given GW."""
@@ -27,6 +29,29 @@ class Team:
             players.append(player)
 
         return players
+    
+
+    def get_captain(self):
+
+        """Returns Player object of captain."""
+
+        for pick in self.team_summary['picks']:
+            if pick['is_captain']:
+                captain = Player(pick['element'])
+
+        return captain
+    
+
+    def get_vice_captain(self):
+
+        """Returns Player object of vice-captain."""
+        
+        for pick in self.team_summary['picks']:
+            if pick['is_vice_captain']:
+                vice_captain = Player(pick['element'])
+
+        return vice_captain
+
 
     def get_team_value(self):
 
@@ -41,12 +66,14 @@ class Team:
 
         return team_value
     
+
     def get_bank_balance(self):
 
         """Returns bank balance in given GW."""
 
         return self.transfers['bank']/10
     
+
     def get_expected_points_for_gw(self, gw_id: int = Bootstrap.get_current_gw_id()):
 
         """Sum of expected points of the starting 11 of the given team."""

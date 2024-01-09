@@ -22,9 +22,11 @@ class Player:
         self.prem_team_name = prem_team['name']
         
         self.ownership = player['selected_by_percent']
-        self.market_price = player['now_cost']
+        self.current_price = player['now_cost']
     
+
     def find_position(self) -> str:
+
         player_type = self.player_summary['element_type']
         if player_type == 1:
             position = 'GKP'
@@ -35,6 +37,7 @@ class Player:
         elif player_type == 4:
             position = 'FWD'
         return position
+
     
     def get_next_x_fixtures(self, num_fixtures: int = 6):
 
@@ -45,7 +48,8 @@ class Player:
 
         return fixture_difficulties
     
-    def get_fixture(self, gw_id: int):
+
+    def get_fixture(self, gw_id: int = Bootstrap.get_current_gw_id()):
 
         """Get the fixture and difficulty for the given GW."""
 

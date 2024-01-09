@@ -1,4 +1,5 @@
 import requests
+import re
 
 
 class Bootstrap:
@@ -15,11 +16,9 @@ class Bootstrap:
 
         for event in Bootstrap.summary['events']:
             current_gw_id = event['id']
-            # if event['is_current'] == True and event['finished'] == False:
-            #     break
-            # elif event['is_previous'] == True and event['finished'] == True:
-            #     break
             if event['is_current'] == True:
+                break
+            elif event['is_next'] == True:
                 break
                 
         return current_gw_id
@@ -31,6 +30,18 @@ class Bootstrap:
 
         for prem_team in Bootstrap.all_prem_teams:
             if prem_team['id'] == prem_team_id:
+                selected_prem_team = prem_team
+                break
+
+        return selected_prem_team
+    
+
+    def get_prem_team_by_name(prem_team_name):
+
+        selected_prem_team = None
+
+        for prem_team in Bootstrap.all_prem_teams:
+            if prem_team['name'] == prem_team_name:
                 selected_prem_team = prem_team
                 break
 
@@ -49,3 +60,16 @@ class Bootstrap:
         return selected_player
     
 
+    def get_player_by_name(player_name):
+
+        selected_player = None
+
+        for player in Bootstrap.all_players:
+            if player['first_name'] + ' ' + player['second_name'] == player_name:
+                selected_player = player
+                break
+            elif player['web_name'] == re.findall(r'\s(.*)', player_name)[0]:
+                selected_player = player
+                break
+
+        return selected_player
