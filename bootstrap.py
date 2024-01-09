@@ -12,63 +12,72 @@ class Bootstrap:
 
     def get_current_gw_id():
 
+        """Returns id of current GW."""
+
         current_gw_id = 0
 
         for event in Bootstrap.summary['events']:
             current_gw_id = event['id']
             if event['is_current'] == True:
                 break
-            elif event['is_next'] == True:
-                break
                 
         return current_gw_id
     
 
-    def get_prem_team_by_id(prem_team_id):
+    def get_prem_team_by_id(search_id: int):
+
+        """Returns prem team details from FPL API for given team id."""
 
         selected_prem_team = None
 
         for prem_team in Bootstrap.all_prem_teams:
-            if prem_team['id'] == prem_team_id:
+            if prem_team['id'] == search_id:
                 selected_prem_team = prem_team
                 break
 
         return selected_prem_team
     
 
-    def get_prem_team_by_name(prem_team_name):
+    def get_prem_team_by_name(search_name: str):
+
+        """Returns prem team details from FPL API for given team name."""
 
         selected_prem_team = None
 
         for prem_team in Bootstrap.all_prem_teams:
-            if prem_team['name'] == prem_team_name:
+            if prem_team['name'] == search_name:
                 selected_prem_team = prem_team
                 break
 
         return selected_prem_team
     
     
-    def get_player_by_id(player_id):
+    def get_player_by_id(search_id: int):
+
+        """Returns player details from FPL API for given player id."""
 
         selected_player = None
 
         for player in Bootstrap.all_players:
-            if player['id'] == player_id:
+            if player['id'] == search_id:
                 selected_player = player
                 break
 
         return selected_player
     
 
-    def get_player_by_name(player_name):
+    def get_player_by_name(search_name: str):
+
+        """WIP!! Returns player details from FPL API for given player name."""
 
         selected_player = None
 
         for player in Bootstrap.all_players:
-            if player['first_name'] + ' ' + player['second_name'] == player_name:
+            player_full_name = player['first_name'] + ' ' + player['second_name']
+            if player_full_name == search_name:
                 selected_player = player
                 break
-            elif player['web_name'] == re.findall(r'\s(.*)', player_name)[0]:
+            elif search_name.lower() in player_full_name.lower():
                 selected_player = player
                 break
 

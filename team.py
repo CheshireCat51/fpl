@@ -74,7 +74,7 @@ class Team:
         return self.transfers['bank']/10
     
 
-    def get_expected_points_for_gw(self, gw_id: int = Bootstrap.get_current_gw_id()):
+    def get_expected_points(self, gw_id: int = Bootstrap.get_current_gw_id()):
 
         """Sum of expected points of the starting 11 of the given team."""
 

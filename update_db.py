@@ -7,6 +7,7 @@ from bootstrap import Bootstrap
 from manager import Manager
 from dotenv import load_dotenv
 import os
+from utils import format_deadline_str
 
 
 fbref_host = 'https://fbref.com'
@@ -62,6 +63,27 @@ player_columns_map = {
     'npxG.1': 'npxG_per_90'
 }
 
+player_gameweek_columns_map = [
+    'player_id',
+    'gameweek_id',
+    'opponent_id',
+    'started',
+    'minutes_played',
+    'goals',
+    'assists',
+    'penalty_goals',
+    'penalty_attempts',
+    'yellow_cards',
+    'red_cards',
+    'xG',
+    'npxG',
+    'xA',
+    'progressive_carries',
+    'progressive_passes',
+    'projected_points',
+    'points'
+]
+
 
 def main():
 
@@ -87,39 +109,42 @@ def main():
     players_df = pd.DataFrame()
     player_gameweeks_df = pd.DataFrame()    
 
+    i = 0
     for squad in squad_rows:
+        squad_id = squads_df.loc[i]['id']
         # Write players from squad to excel
         player_df, player_rows = scrape_html(squad, 'stats_standard_9', 'player')
         # Remove bottom two rows of player df
         player_df = player_df.iloc[:-2]
-        player_df.insert(0, 'squad_id', Bootstrap.get_prem_team_by_name(squad.text)['id'])
         player_df = trim_df(player_columns_map, player_df)
+        player_df.insert(0, 'squad_id', squad_id)
         player_df['id'] = player_df.apply(get_player_id, axis=1)
         players_df = pd.concat([players_df, player_df], axis=0)
 
-        for player in player_rows:
-            # Write player's last 5 games to excel
-            player_gameweek_df, player_gameweek_rows = scrape_html(player, 'last_5_matchlogs')
-            player_gameweek_df.insert(0, 'id', Bootstrap.get_player_by_name(player.text)['id'])
-            player_gameweeks_df = pd.concat([player_gameweeks_df, player_gameweek_df], axis=0)
+        # for player in player_rows:
+        #     # Write player's last 5 games to excel
+        #     player_gameweek_df, player_gameweek_rows = scrape_html(player, 'last_5_matchlogs')
+        #     player_gameweek_df['player_id'] = player_gameweek_df.apply(get_player_id, axis=1)
+        #     player_gameweeks_df = pd.concat([player_gameweeks_df, player_gameweek_df], axis=0)
 
-            if player.text == 'Ben White':
-                break
+        #     if player.text == 'Ben White':
+        #         break
 
-            time.sleep(10)
+        time.sleep(10)
 
-        break
+        i += 1
+        #break
 
     print(squad_gameweeks_df)
     print(players_df)
     print(player_gameweeks_df)
 
-    gameweeks_df.to_excel('gameweeks.xlsx', header=0)
-    my_team_df.to_excel('my_team.xlsx', header=0)
-    squads_df.to_excel('squads.xlsx', header=0)
-    squad_gameweeks_df.to_excel('squad_gameweeks.xlsx', header=0)
-    players_df.to_excel('players.xlsx', header=0)
-    player_gameweeks_df.to_excel('player_gameweeks.xlsx', header=0)
+    gameweeks_df.to_excel('gameweeks.xlsx')
+    my_team_df.to_excel('my_team.xlsx')
+    squads_df.to_excel('squads.xlsx')
+    squad_gameweeks_df.to_excel('squad_gameweeks.xlsx')
+    players_df.to_excel('players.xlsx')
+    player_gameweeks_df.to_excel('player_gameweeks.xlsx')
 
     return gameweeks_df, my_team_df, squads_df, squad_gameweeks_df, players_df, player_gameweeks_df
 
@@ -161,7 +186,12 @@ def get_player_id(row):
 
     """Returns player id from FPL API for given row."""
 
-    return Bootstrap.get_player_by_name(row['name'])['id']
+    player = Bootstrap.get_player_by_name(row['name'])
+
+    if player == None:
+        return None
+    else:
+        return player['id']
 
 
 def get_url_from_anchor(element):
@@ -224,18 +254,19 @@ def get_gameweek_data(me: Manager):
     """Returns gameweek df assembled from FPL API data."""
 
     for event in Bootstrap.summary['events']:
-        if event['is_previous'] == True:
+        if event['is_previous']:
             previous_gw = event
-        elif event['is_current'] == True:
+        elif event['is_current']:
             current_gw = event
-        elif event['is_next'] == True:
-            current_gw = event
+        elif event['is_next']:
+            next_gw = event
     
     gameweeks_df = pd.DataFrame(
         columns=['id', 'deadline', 'is_current', 'my_projected_points', 'my_points_scored', 'mean_points_scored'],
         data=[
-            [previous_gw['id'], format_deadline_str(previous_gw['deadline_time']), 0, None, me.manager_summary['summary_event_points'], previous_gw['average_entry_score']],
-            [current_gw['id'], format_deadline_str(current_gw['deadline_time']), 1, None, None, None]
+            [previous_gw['id'], format_deadline_str(previous_gw['deadline_time']), 0, None, None, previous_gw['average_entry_score']],
+            [current_gw['id'], format_deadline_str(current_gw['deadline_time']), 1, None, me.manager_summary['summary_event_points'], current_gw['average_entry_score']],
+            [next_gw['id'], format_deadline_str(next_gw['deadline_time']), 0, me.current_team.get_expected_points(next_gw['id']), None, None]
         ]
     )
     
@@ -266,9 +297,9 @@ def get_my_team_data(me: Manager):
             is_captain,
             is_vice_captain,
             None,
+            player.current_price,
             None,
-            None,
-            None
+            player.get_expected_points()
         ])
 
     my_team_df = pd.DataFrame(
@@ -277,15 +308,6 @@ def get_my_team_data(me: Manager):
     )
 
     return my_team_df
-
-
-def format_deadline_str(deadline: str):
-
-    """Returns str in MySQL datetime format."""
-
-    deadline_str = deadline.replace('Z', ' ').replace('T', '')
-
-    return deadline_str
 
 
 if __name__ == '__main__':

@@ -48,8 +48,17 @@ def normal_distribution(mu: float, sigma: float, limits: tuple):
     return quad(normal_prob_density, limits[0], limits[1])[0]
 
 
-if __name__ == '__main__':
-    print(normal_distribution(70, 6, (-100, 60)))
+def format_deadline_str(deadline: str):
+
+    """Returns str in MySQL datetime format."""
+
+    deadline_str = deadline.replace('Z', '').replace('T', ' ')
+
+    return deadline_str
+
+
+# if __name__ == '__main__':
+#     print(normal_distribution(70, 6, (-100, 60)))
 
 
 fpl_points_system = {

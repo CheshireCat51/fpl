@@ -1,7 +1,7 @@
 from bootstrap import Bootstrap
 from utils import fpl_points_system, poisson_distribution, normal_distribution
 import math
-import re
+import crud
 
 
 class Player:
@@ -156,7 +156,7 @@ class Player:
 
         # Where i represents goals conceded...
         for i in range(0, 11):
-            prob_concede_i_goals = poisson_distribution(i, 1.9)
+            prob_concede_i_goals = poisson_distribution(i, crud.read_defence_strength(self.prem_team_id))
             if i == 0:
                 defensive_ev += prob_concede_i_goals*fpl_points_system[self.position]['Clean Sheet']
             else:
