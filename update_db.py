@@ -9,11 +9,12 @@ from dotenv import load_dotenv
 import os
 from utils import format_deadline_str
 from player import Player
+from crud import cnx
 
 
 fbref_host = 'https://fbref.com'
 
-squad_columns_map = {
+squad_column_map = {
     'Squad': 'name',
     'MP': 'matches_played',
     'Gls': 'goals',
@@ -34,14 +35,24 @@ squad_columns_map = {
     'npxG.1': 'npxG_per_90'
 }
 
-team_strength_columns_map = {
-    'Team': 'abbreviation',
-    '   Attack Strength': 'attack_strength',
-    ' Defence Strength': 'defence_strength',
-    ' Overall Strength': 'overall_strength'  
+squad_gw_column_map = {
+    'Round': 'gameweek_id',
+    'Opponent': 'name',
+    'Venue': 'venue',
+    'xG': 'xG',
+    'xGA': 'xGC'
 }
 
-player_columns_map = {
+team_strength_column_map = {
+    '   Attack Strength': 'attack_strength',
+    '+/-': 'attack_strength_change',
+    ' Defence Strength': 'defence_strength',
+    '+/-.1': 'defence_strength_change',
+    ' Overall Strength': 'overall_strength',
+    '+/-.2': 'overall_strength_change',  
+}
+
+player_column_map = {
     'Player': 'name',
     'Pos': 'position',
     'MP': 'matches_played',
@@ -64,9 +75,8 @@ player_columns_map = {
     'npxG.1': 'npxG_per_90'
 }
 
-player_gameweek_columns_map = {
+player_gw_column_map = {
     'Round': 'gameweek_id',
-    #'Venue': 'venue',
     'Start': 'started',
     'Min': 'minutes_played',
     'Gls': 'goals',
@@ -81,25 +91,40 @@ player_gameweek_columns_map = {
 }
 
 
-def main():
+# def bulk_update():
 
+#     """Bulk update db with latest data."""
+
+#     df.to_sql('gameweek', con=cnx, if_exists='append', index=False)
+
+
+def get_latest_data() -> list[pd.DataFrame]:
+
+    gw_id = Bootstrap.get_current_gw_id()
+
+    # Load environment vars
     load_dotenv()
+
+    # Create client manager object
     me = Manager(os.environ.get('ME'))
-    gameweeks_df = get_gameweek_data(me)
-    #print(gameweeks_df)
-    my_team_df = get_my_team_data(me)
-    #print(my_team_df)
+
+    # Create/update gameweek table
+    #gameweeks_df = get_gameweek_data(me)
+
+    # Update my_team table
+    #my_team_df = get_my_team_data(me)
 
     # Write squads to excel
     squads_url = '/en/comps/9/Premier-League-Stats'
     squads_df, squad_rows = scrape_html(squads_url, 'stats_squads_standard_for', 'team')
-    squads_df = trim_df(squad_columns_map, squads_df)
+    squads_df = trim_df(squad_column_map, squads_df)
     squads_df['id'] = squads_df.apply(get_squad_id, axis=1)
-    #print(squads_df)
 
-    # Join elevenify data to fbref squad data
     team_strengths_df = get_elevenify_data()
-    squads_df = squads_df.join(team_strengths_df)
+    # Add squad ids to team strength df
+    team_strengths_df.insert(0, 'squad_id', list(range(1, len(team_strengths_df.index)+1)))
+    # Add current gw id
+    team_strengths_df.insert(0, 'gameweek_id', gw_id)
 
     squad_gameweeks_df = pd.DataFrame()
     players_df = pd.DataFrame()
@@ -108,53 +133,73 @@ def main():
     i = 0
     for squad in squad_rows:
         squad_id = squads_df.loc[i]['id']
-        # Write players from squad to excel
+
+        # Write squad gameweek breakdown to df
+        squad_gameweek_df, squad_gameweek_rows = scrape_html(squad, 'matchlogs_for', header=0)
+        squad_gameweek_df = squad_gameweek_df[squad_gameweek_df['Comp'] == 'Premier League']
+        squad_gameweek_df = trim_df(squad_gw_column_map, squad_gameweek_df)
+        squad_gameweek_df.insert(0, 'squad_id', squad_id)
+        squad_gameweek_df['opposition_id'] = squad_gameweek_df.apply(get_squad_id, axis=1)
+        squad_gameweek_df['gameweek_id'] = squad_gameweek_df.apply(get_gameweek_id, axis=1)
+        squad_gameweek_df = squad_gameweek_df.drop('name', axis=1)
+
+        # Get relevant rows to current squad from team strength df
+        team_strength_df = team_strengths_df.loc[team_strengths_df['squad_id'] == squad_id]
+        # Reset index such that strengths can be found by index
+        team_strength_df = team_strength_df.reset_index()
+        for strength_col in team_strength_column_map.values():
+            squad_gameweek_df.loc[squad_gameweek_df['gameweek_id'] == gw_id, strength_col] = team_strength_df.loc[0, strength_col]
+
+        squad_gameweeks_df = pd.concat([squad_gameweeks_df, squad_gameweek_df], axis=0)
+
+        time.sleep(5)
+
+        # Write players from squad to df
         player_df, player_rows = scrape_html(squad, 'stats_standard_9', 'player')
-        # Remove bottom two rows of player df
+        # Remove bottom two rows of player df (these are summary rows)
         player_df = player_df.iloc[:-2]
-        player_df = trim_df(player_columns_map, player_df)
+        player_df = trim_df(player_column_map, player_df)
         player_df.insert(0, 'squad_id', squad_id)
         player_df['id'] = player_df.apply(get_player_id, axis=1)
         player_df['position'] = player_df.apply(get_player_position, axis=1)
         players_df = pd.concat([players_df, player_df], axis=0)
 
-        j = 0
-        for player in player_rows:
-            # Write player's last 5 games to excel
-            fpl_player = Player(get_player_id(player_df.loc[j]))
-            if fpl_player.position != 'GKP':
-                player_gameweek_df, player_gameweek_rows = scrape_html(player, 'last_5_matchlogs')
-                player_gameweek_df = trim_df(player_gameweek_columns_map, player_gameweek_df)
-                player_gameweek_df.insert(0, 'player_id', fpl_player.player_id)
-                player_gameweek_df['started'] = player_gameweek_df.apply(format_started_col, axis=1)
-                player_gameweek_df['gameweek_id'] = player_gameweek_df.apply(get_gameweek_id, axis=1)
-                #player_gameweek_df['opponent_id'] = player_gameweek_df.apply(lambda row: fpl_player.get_fixture(row['gameweek_id'])['id'], axis=1)
-                player_gameweek_df['projected_points'] = player_gameweek_df.apply(lambda row: fpl_player.get_expected_points(row['gameweek_id']), axis=1)
-                player_gameweek_df['points_scored'] = player_gameweek_df.apply(lambda row: fpl_player.get_points_scored(row['gameweek_id']), axis=1)
-                player_gameweeks_df = pd.concat([player_gameweeks_df, player_gameweek_df], axis=0)
+        # j = 0
+        # for player in player_rows:
+        #     # Write player's last 5 games to excel
+        #     fpl_player = Player(get_player_id(player_df.loc[j]))
+        #     if fpl_player.position != 'GKP':
+        #         player_gameweek_df, player_gameweek_rows = scrape_html(player, 'last_5_matchlogs')
+        #         player_gameweek_df = trim_df(player_gw_column_map, player_gameweek_df)
+        #         player_gameweek_df.insert(0, 'player_id', fpl_player.player_id)
+        #         player_gameweek_df['started'] = player_gameweek_df.apply(format_started_col, axis=1)
+        #         player_gameweek_df['gameweek_id'] = player_gameweek_df.apply(get_gameweek_id, axis=1)
+        #         player_gameweek_df['projected_points'] = player_gameweek_df.apply(lambda row: fpl_player.get_expected_points(row['gameweek_id']), axis=1)
+        #         player_gameweek_df['points_scored'] = player_gameweek_df.apply(lambda row: fpl_player.get_points_scored(row['gameweek_id']), axis=1)
+        #         player_gameweeks_df = pd.concat([player_gameweeks_df, player_gameweek_df], axis=0)
 
-            # if player.text == 'Ben White':
-            #     break
+        #     if player.text == 'Ben White':
+        #         break
 
-            j += 1
+        #     j += 1
 
-            time.sleep(5)
+        #     time.sleep(5)
 
         i += 1
-        #break
+        # break
 
-    # print(squad_gameweeks_df)
-    # print(players_df)
-    # print(player_gameweeks_df)
-
-    gameweeks_df.to_excel('gameweeks.xlsx')
-    my_team_df.to_excel('my_team.xlsx')
+    #gameweeks_df.to_excel('gameweeks.xlsx')
+    #my_team_df.to_excel('my_team.xlsx')
     squads_df.to_excel('squads.xlsx')
     squad_gameweeks_df.to_excel('squad_gameweeks.xlsx')
     players_df.to_excel('players.xlsx')
-    player_gameweeks_df.to_excel('player_gameweeks.xlsx')
+    #player_gameweeks_df.to_excel('player_gameweeks.xlsx')
 
-    return gameweeks_df, my_team_df, squads_df, squad_gameweeks_df, players_df, player_gameweeks_df
+    #squads_df.to_sql('squad', con=cnx, if_exists='append', index=False)
+    #squad_gameweeks_df.to_sql('squad_gameweek', con=cnx, if_exists='append', index=False)
+    players_df.to_sql('player', con=cnx, if_exists='append', index=False)
+
+    return [squads_df, squad_gameweeks_df, players_df]
 
 
 def trim_df(column_map, df: pd.DataFrame):
@@ -195,7 +240,7 @@ def get_player_id(row):
     """Returns player id from FPL API for given row."""
 
     try:
-        return find_player(row).player_id
+        return find_player(row['name']).player_id
     except AttributeError:
         return None
     
@@ -205,16 +250,16 @@ def get_player_position(row):
     """Returns player position from FPL API for given row."""
 
     try:
-        return find_player(row).position
+        return find_player(row['name']).position
     except:
         return None
 
 
-def find_player(row) -> Player:
+def find_player(player_name) -> Player:
 
     """Find player in FPL API."""
 
-    player = Bootstrap.get_player_by_name(row['name'])
+    player = Bootstrap.get_player_by_name(player_name)
 
     if player == None:
         return None
@@ -226,9 +271,9 @@ def get_gameweek_id(row):
 
     """Returns gameweek id from FBRef table."""
 
-    round_str = row['gameweek_id']
+    round = row['gameweek_id']
 
-    return round_str.split(' ')[1]
+    return int(round.split(' ')[1])
 
 
 def format_started_col(row):
@@ -253,14 +298,12 @@ def get_elevenify_data():
     """Returns dataframe of team strengths from Elevenify."""
 
     team_strength_df = pd.read_csv('UVKbs.csv', sep=',', header=0)
-    selected_columns = [i for i in team_strength_columns_map.keys()]
-    team_strength_df = team_strength_df[selected_columns]
-    team_strength_df = team_strength_df.rename(columns=team_strength_columns_map)
+    team_strength_df = trim_df(team_strength_column_map, team_strength_df)
 
     return team_strength_df
         
 
-def scrape_html(tag, table_id: str, data_stat: str | None = None):
+def scrape_html(tag, table_id: str, data_stat: str | None = None, header: int = 1):
 
     """Returns a dataframe containing data from table with given table id and a soup objecting containing relevant rows from next table."""
 
@@ -282,8 +325,8 @@ def scrape_html(tag, table_id: str, data_stat: str | None = None):
         # Find appropriate table
         table = soup.find('table', {'id': table_id})
 
-        # Transform HTML table to pandas Dataframe and write to excel
-        table_df = pd.read_html(StringIO(str(table)), header=1)[0]
+        # Transform HTML table to pandas Dataframe
+        table_df = pd.read_html(StringIO(str(table)), header=header)[0]
 
     except ValueError as e:
         print(e)
@@ -337,20 +380,14 @@ def get_my_team_data(me: Manager):
             
         data.append([
             Bootstrap.get_player_by_name(player_name)['id'],
-            player_name,
-            player.position,
-            player.prem_team_id,
-            player.get_fixture(Bootstrap.get_current_gw_id()+1)['id'],
             is_captain,
             is_vice_captain,
             None,
-            player.current_price,
-            None,
-            player.get_expected_points()
+            None
         ])
 
     my_team_df = pd.DataFrame(
-        columns=['player_id', 'player_name', 'position', 'squad_id', 'opponent_id', 'is_captain', 'is_vice_captain', 'purchase_price', 'current_price', 'selling_price', 'projected_points'],
+        columns=['player_id', 'is_captain', 'is_vice_captain', 'purchase_price', 'selling_price'],
         data=data
     )
 
@@ -358,4 +395,4 @@ def get_my_team_data(me: Manager):
 
 
 if __name__ == '__main__':
-    main()
+    get_latest_data()

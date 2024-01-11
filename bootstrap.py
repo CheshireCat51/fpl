@@ -10,7 +10,7 @@ class Bootstrap:
     all_players = summary['elements']
 
 
-    def get_current_gw_id():
+    def get_current_gw_id() -> int:
 
         """Returns id of current GW."""
 

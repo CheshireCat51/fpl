@@ -107,7 +107,9 @@ class Player:
         if self.player_summary['status'] == 'a': # a = available
             x_mins = self.player_summary['minutes']/(Bootstrap.get_current_gw_id()+1)
         elif self.player_summary['status'] == 'd': # d = doubt
-            chance_of_playing = self.player_summary['chance_of_playing_this_round']
+            chance_of_playing = self.player_summary['chance_of_playing_next_round']
+            if chance_of_playing == None:
+                chance_of_playing = 0
             x_mins = (self.player_summary['minutes']/Bootstrap.get_current_gw_id()) * int(chance_of_playing)/100
         elif self.player_summary['status'] in ['i', 's', 'u']: # i = injured, u = not in prem anymore, s = suspended
             x_mins = 0
