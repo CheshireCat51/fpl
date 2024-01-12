@@ -23,5 +23,17 @@ def read_attack_strength(squad_id: int, gw_id: int = Bootstrap.get_current_gw_id
     return cnx.execute(text(f'SELECT attack_strength FROM squad WHERE squad_id = {squad_id} AND gameweek_id = {gw_id}')).fetchone()[0]
 
 
-# if __name__ == '__main__':
-#     bulk_update()
+def read_expected_mins(player_id: int):
+
+    """Returns mean mins played given that the player started and the std of these values."""
+
+    results = cnx.execute(text(f'SELECT AVG(pgw.minutes_played), STD(pgw.minutes_played) \
+                                FROM player_gameweek pgw \
+                                JOIN player p ON pgw.player_id = p.id \
+                                WHERE pgw.started = 1 AND p.id = {player_id}')).fetchall()[0]
+    
+    return (float(results[0]), float(results[1]))
+
+
+if __name__ == '__main__':
+    print(read_expected_mins(20))

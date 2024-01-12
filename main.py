@@ -26,7 +26,7 @@ def main():
     #     print('\n')
 
     me = Manager(manager_id)
-    print('Me:', me.current_team.get_expected_points_for_gw())
+    print('Me:', me.current_team.get_projected_points())
 
 
 # def solve_gk_problem(budget: float):

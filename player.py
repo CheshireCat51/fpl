@@ -25,7 +25,7 @@ class Player:
         self.ownership = player['selected_by_percent']
         self.current_price = player['now_cost']
 
-        self.player_details = requests.get(f'https://fantasy.premierleague.com/api/element-summary/{self.player_id}/').json()
+        self.player_details = Bootstrap.session.get(f'https://fantasy.premierleague.com/api/element-summary/{self.player_id}/').json()
     
 
     def find_position(self) -> str:
@@ -105,21 +105,22 @@ class Player:
         """Calculate expected mins based on mins already played this season and injury status."""
 
         if self.player_summary['status'] == 'a': # a = available
-            x_mins = self.player_summary['minutes']/(Bootstrap.get_current_gw_id()+1)
+            mean_mins, std_mins = crud.read_expected_mins(self.player_id)
         elif self.player_summary['status'] == 'd': # d = doubt
             chance_of_playing = self.player_summary['chance_of_playing_next_round']
             if chance_of_playing == None:
                 chance_of_playing = 0
-            x_mins = (self.player_summary['minutes']/Bootstrap.get_current_gw_id()) * int(chance_of_playing)/100
+            mean_mins, std_mins = crud.read_expected_mins(self.player_id) * int(chance_of_playing)/100
         elif self.player_summary['status'] in ['i', 's', 'u']: # i = injured, u = not in prem anymore, s = suspended
-            x_mins = 0
+            mean_mins = 0
+            std_mins = 0
 
-        return x_mins
+        return mean_mins, std_mins
     
 
-    def get_expected_points(self, gw_id: int = Bootstrap.get_current_gw_id()+1):
+    def get_projected_points(self):
 
-        """Use xG, xA and xGC to calculate xP. Doesn't currently take into account BPS."""
+        """Use xG, xA and xGC to calculate xP for upcoming GW. Doesn't currently take into account BPS."""
 
         save_ev = 0
         defensive_ev = 0
@@ -141,14 +142,23 @@ class Player:
 
         """Returns EV due to mins played. Assumes minutes follow Normal distribution. WORK OUT HOW TO GET STD."""
 
-        x_mins = self.get_expected_mins()
+        mean_mins, std_mins = self.get_expected_mins()
 
-        if x_mins > 0:
-            less_than_60_ev = normal_distribution(x_mins, 12, (-1000, 60))*fpl_points_system['Other']['< 60 mins']
-            more_than_60_ev = normal_distribution(x_mins, 12, (60, 1000))*fpl_points_system['Other']['>= 60 mins']
-            return less_than_60_ev + more_than_60_ev
-        else:
-            return 0
+        if std_mins > 0:
+            if mean_mins > 0:
+                less_than_60_ev = normal_distribution(mean_mins, std_mins, (-1000, 60))*fpl_points_system['Other']['< 60 mins']
+                more_than_60_ev = normal_distribution(mean_mins, std_mins, (60, 1000))*fpl_points_system['Other']['>= 60 mins']
+                return less_than_60_ev + more_than_60_ev
+            else:
+                return 0
+            
+        elif std_mins == 0:
+            if mean_mins > 60:
+                return 2
+            elif 0 < mean_mins < 60:
+                return 1
+            elif mean_mins == 0:
+                return 0
 
 
     def get_attacking_returns(self) -> float:

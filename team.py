@@ -74,26 +74,28 @@ class Team:
         return self.transfers['bank']/10
     
 
-    def get_expected_points(self, gw_id: int = Bootstrap.get_current_gw_id()):
+    def get_projected_points(self):
 
-        """Sum of expected points of the starting 11 of the given team."""
+        """Sum of projected points of the starting 11 of the given team."""
 
         total_xp = 0
         captain_pts_added = False
         captain_found = False
         for player in self.get_players():
             for pick in self.team_summary['picks']:
-                if pick['element'] == player.player_id:
-                    xp = player.get_expected_points(gw_id)
+                if pick['element'] == player.player_id and player.position != 'GKP':
+                    xp = player.get_projected_points()
                     # check that captain is not suspended, injured or out for another reason
                     if pick['is_captain']:
+                        print('C')
                         if xp != 0:
                             xp *= pick['multiplier']
                             captain_found = True
                             captain_pts_added = True
                         else:
                             captain_found = True
-                    elif pick['is_vice_captain'] and captain_found == True:
+                    elif pick['is_vice_captain'] and captain_found == False:
+                        print('VC')
                         xp *= 2
                         captain_pts_added = True
                     total_xp += xp
