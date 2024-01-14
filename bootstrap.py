@@ -1,6 +1,8 @@
 import requests
-import re
+import time
 
+
+# Most of these functions can now be replaced by DB queries in crud.py
 
 class Bootstrap:
 
@@ -89,3 +91,13 @@ class Bootstrap:
                 break
 
         return selected_player
+    
+
+if __name__ == '__main__':
+    start_time = time.time()
+    Bootstrap.get_current_gw_id()
+    #import crud
+    #crud.read_current_gw_id()
+    end_time = time.time()
+    exc_time = end_time - start_time
+    print(exc_time)

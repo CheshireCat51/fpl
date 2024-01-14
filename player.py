@@ -73,22 +73,22 @@ class Player:
         return fixture_difficulty
 
 
-    def get_stats(self):
+    # def get_stats(self):
 
-        stats = {'total': {}, 'per 90': {}}
+    #     stats = {'total': {}, 'per 90': {}}
 
-        for key in stats.keys():
-            if key == 'total':
-                suffix = ''
-            else:
-                suffix = '_per_90'
-                stats[key]['clean_sheets'] = self.player_summary[f'clean_sheets{suffix}']
-            stats[key]['xG'] = self.player_summary[f'expected_goals{suffix}']
-            stats[key]['xA'] = self.player_summary[f'expected_assists{suffix}']
-            stats[key]['xGI'] = self.player_summary[f'expected_goal_involvements{suffix}']
-            stats[key]['xGC'] = self.player_summary[f'expected_goals_conceded{suffix}']
+    #     for key in stats.keys():
+    #         if key == 'total':
+    #             suffix = ''
+    #         else:
+    #             suffix = '_per_90'
+    #             stats[key]['clean_sheets'] = self.player_summary[f'clean_sheets{suffix}']
+    #         stats[key]['xG'] = self.player_summary[f'expected_goals{suffix}']
+    #         stats[key]['xA'] = self.player_summary[f'expected_assists{suffix}']
+    #         stats[key]['xGI'] = self.player_summary[f'expected_goal_involvements{suffix}']
+    #         stats[key]['xGC'] = self.player_summary[f'expected_goals_conceded{suffix}']
 
-        return stats
+    #     return stats
     
 
     def get_points_scored(self, gw_id: int = Bootstrap.get_current_gw_id()-1):
@@ -104,16 +104,19 @@ class Player:
 
         """Calculate expected mins based on mins already played this season and injury status."""
 
-        if self.player_summary['status'] == 'a': # a = available
-            mean_mins, std_mins = crud.read_expected_mins(self.player_id)
-        elif self.player_summary['status'] == 'd': # d = doubt
-            chance_of_playing = self.player_summary['chance_of_playing_next_round']
-            if chance_of_playing == None:
-                chance_of_playing = 0
-            mean_mins, std_mins = crud.read_expected_mins(self.player_id) * int(chance_of_playing)/100
-        elif self.player_summary['status'] in ['i', 's', 'u']: # i = injured, u = not in prem anymore, s = suspended
-            mean_mins = 0
-            std_mins = 0
+        mean_mins, std_mins, chance_of_playing = crud.read_expected_mins(self.player_id)
+        mean_mins *= chance_of_playing/100
+
+        # if self.player_summary['status'] == 'a': # a = available
+        #     mean_mins, std_mins = crud.read_expected_mins(self.player_id)
+        # elif self.player_summary['status'] == 'd': # d = doubt
+        #     chance_of_playing = self.player_summary['chance_of_playing_next_round']
+        #     if chance_of_playing == None:
+        #         chance_of_playing = 0
+        #     mean_mins, std_mins = crud.read_expected_mins(self.player_id) * int(chance_of_playing)/100
+        # elif self.player_summary['status'] in ['i', 's', 'u']: # i = injured, u = not in prem anymore, s = suspended
+        #     mean_mins = 0
+        #     std_mins = 0
 
         return mean_mins, std_mins
     
@@ -157,31 +160,34 @@ class Player:
                 return 2
             elif 0 < mean_mins < 60:
                 return 1
-            elif mean_mins == 0:
+            else:
                 return 0
 
 
-    def get_attacking_returns(self) -> float:
+    def get_attacking_returns(self, gw_id: int = Bootstrap.get_current_gw_id() + 1) -> float:
 
         """Returns EV due to attacking returns. Assumes Player plays 90 mins."""
 
-        stats_per_90 = self.get_stats()['per 90']
+        npxG_per_90, xA_per_90 = crud.read_attacking_stats_per_90(self.player_id)
 
-        goal_ev = fpl_points_system[self.position]['Goal Scored']*stats_per_90['xG']
-        assist_ev = fpl_points_system['Other']['Assist']*stats_per_90['xA']
+        goal_ev = fpl_points_system[self.position]['Goal Scored']*npxG_per_90
+        assist_ev = fpl_points_system['Other']['Assist']*xA_per_90
 
         return goal_ev + assist_ev
     
 
-    def get_defensive_returns(self) -> float:
+    def get_defensive_returns(self, gw_id: int = Bootstrap.get_current_gw_id() + 1) -> float:
 
         """Returns EV due to defensive returns. Assumes goals follow Poisson distribution."""
 
         defensive_ev = 0
+        defence_strength = crud.read_defence_strength(self.prem_team_id)
+        opponent_attack_strength = crud.read_attack_strength(self.get_fixture()['id'])
+        mean_strength = (defence_strength+opponent_attack_strength)/2
 
         # Where i represents goals conceded...
         for i in range(0, 11):
-            prob_concede_i_goals = poisson_distribution(i, crud.read_defence_strength(self.prem_team_id))
+            prob_concede_i_goals = poisson_distribution(i, mean_strength)
             if i == 0:
                 defensive_ev += prob_concede_i_goals*fpl_points_system[self.position]['Clean Sheet']
             else:

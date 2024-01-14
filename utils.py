@@ -57,15 +57,11 @@ def format_deadline_str(deadline: str):
     return deadline_str
 
 
-# if __name__ == '__main__':
-#     print(normal_distribution(70, 6, (-100, 60)))
-
-
 fpl_points_system = {
     'GKP': {
         'Clean Sheet': 4,
         'Goal Scored': 6,
-        'Save (per 3 saves)': 1,
+        '3 Saves': 1,
         'Penalty Save': 5,
         '2 Goals Conceded': -1,
     },
