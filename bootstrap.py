@@ -10,6 +10,7 @@ class Bootstrap:
     summary = session.get('https://fantasy.premierleague.com/api/bootstrap-static/').json()
     all_prem_teams = summary['teams']
     all_players = summary['elements']
+    all_events = summary['events']
 
 
     def get_current_gw_id() -> int:
@@ -18,7 +19,7 @@ class Bootstrap:
 
         current_gw_id = 0
 
-        for event in Bootstrap.summary['events']:
+        for event in Bootstrap.all_events:
             current_gw_id = event['id']
             if event['is_current'] == True:
                 break
@@ -96,8 +97,6 @@ class Bootstrap:
 if __name__ == '__main__':
     start_time = time.time()
     Bootstrap.get_current_gw_id()
-    #import crud
-    #crud.read_current_gw_id()
     end_time = time.time()
     exc_time = end_time - start_time
     print(exc_time)

@@ -1,7 +1,6 @@
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup, element
-import time
 from io import StringIO
 from bootstrap import Bootstrap
 from manager import Manager
@@ -9,7 +8,8 @@ from dotenv import load_dotenv
 import os
 from utils import format_deadline_str
 from player import Player
-from crud import cnx, engine
+from crud import cnx, engine, update_from_file
+from time import time
 
 
 fbref_host = 'https://fbref.com'
@@ -104,8 +104,8 @@ def bulk_update():
     # Create/update gameweek table
     gameweeks_df = get_gameweek_data(me)
 
-    # Update my_team table
-    #my_team_df = get_my_team_data(me)
+    # # Update my_team table
+    # my_team_df = get_my_team_data(me)
 
     # # Write squads to excel
     # squads_url = '/en/comps/9/Premier-League-Stats'
@@ -444,5 +444,26 @@ def get_my_team_data(me: Manager):
     return my_team_df
 
 
+def update_gameweek():
+
+    """Update gameweek table immediately after gameweek ends."""
+
+    me = Manager(os.environ.get('ME'))
+    current_gw = [i for i in Bootstrap.all_events if i['id'] == Bootstrap.get_current_gw_id()][0]
+    gw_id = current_gw['id']
+
+    args = (me.manager_summary['summary_event_points'], 
+            current_gw['average_entry_score'],
+            gw_id,
+            me.current_team.get_projected_points(),
+            gw_id+1)
+    
+    update_from_file('update_gameweek.sql', args)
+
+
 if __name__ == '__main__':
-    bulk_update()
+    update_gameweek()
+
+
+# if __name__ == '__main__':
+#     bulk_update()

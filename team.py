@@ -94,7 +94,7 @@ class Team:
                             captain_pts_added = True
                         else:
                             captain_found = True
-                    elif pick['is_vice_captain'] and captain_found == False:
+                    elif pick['is_vice_captain'] and captain_found == True and captain_pts_added == False:
                         print('VC')
                         xp *= 2
                         captain_pts_added = True

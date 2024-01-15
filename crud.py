@@ -2,11 +2,14 @@ from dotenv import load_dotenv
 import os
 from sqlalchemy import create_engine, text
 from bootstrap import Bootstrap
+import mysql.connector
 
 
 load_dotenv()
 engine = create_engine(f'mysql://app:{os.environ.get('DB_PASS')}@localhost/fpl_model')
 cnx = engine.connect()
+
+write_conn = mysql.connector.connect(host='localhost', user='app', password=os.environ.get('DB_PASS'), database='fpl_model')
 
 
 def read_defence_strength(squad_id: int, gw_id: int = Bootstrap.get_current_gw_id() + 1):
@@ -58,5 +61,12 @@ def read_current_gw_id():
                             WHERE gw.is_current = 1')).fetchone()[0]
 
 
-if __name__ == '__main__':
-    print(read_expected_mins(36))
+def update_from_file(query_file_path: str, args: tuple):
+
+    """Read SQL file, insert args and execute."""
+    
+    with write_conn.cursor() as cursor:
+        with open(f'./sql/{query_file_path}', 'r') as query_file:
+            query = query_file.read()
+
+        cursor.execute(query, args)

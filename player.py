@@ -2,7 +2,6 @@ from bootstrap import Bootstrap
 from utils import fpl_points_system, poisson_distribution, normal_distribution
 import math
 import crud
-import requests
 
 
 class Player:
@@ -44,12 +43,14 @@ class Player:
     
     def get_next_x_fixtures(self, num_fixtures: int = 6):
 
-        fixture_difficulties = {}
+        """Returns dictionary of next N fixtures for given N."""
+
+        fixtures = {}
         for i in range(num_fixtures+1):
             gw = Bootstrap.get_current_gw_id()+i
-            fixture_difficulties[gw] = self.get_fixture(gw)
+            fixtures[gw] = self.get_fixture(gw)
 
-        return fixture_difficulties
+        return fixtures
     
 
     def get_fixture(self, gw_id: int = Bootstrap.get_current_gw_id()+1):
@@ -57,20 +58,20 @@ class Player:
         """Get the fixture and difficulty for the given GW."""
 
         fixture = Bootstrap.session.get(f'https://fantasy.premierleague.com/api/fixtures?team={self.prem_team_id}&event={gw_id}').json()[0]
-        fixture_difficulty = {}
+        opponent = {}
 
         if fixture['team_a'] == self.prem_team_id: # if player's team are away team...
-            fixture_difficulty = {
+            opponent = {
                 'id': fixture['team_h'],
                 'name': Bootstrap.get_prem_team_by_id(fixture['team_h'])['name']
             }
         else: # else if player's team are home team...
-            fixture_difficulty = {
+            opponent = {
                 'id': fixture['team_a'],
                 'name': Bootstrap.get_prem_team_by_id(fixture['team_a'])['name']
             }
         
-        return fixture_difficulty
+        return opponent
 
 
     # def get_stats(self):
