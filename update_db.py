@@ -101,11 +101,11 @@ def bulk_update():
     # Create client manager object
     me = Manager(os.environ.get('ME'))
 
-    # Create/update gameweek table
-    gameweeks_df = get_gameweek_data(me)
+    # # Create/update gameweek table
+    # gameweeks_df = get_gameweek_data(me)
 
-    # # Update my_team table
-    # my_team_df = get_my_team_data(me)
+    # Update my_team table
+    my_team_df = get_my_team_data(me)
 
     # # Write squads to excel
     # squads_url = '/en/comps/9/Premier-League-Stats'
@@ -205,20 +205,19 @@ def bulk_update():
 
     #             time.sleep(5)
 
-    gameweeks_df.to_excel('gameweeks.xlsx')
-    #my_team_df.to_excel('my_team.xlsx')
+    #gameweeks_df.to_excel('gameweeks.xlsx')
+    my_team_df.to_excel('my_team.xlsx')
     #squads_df.to_excel('squads.xlsx')
     #squad_gameweeks_df.to_excel('squad_gameweeks.xlsx')
     #players_df.to_excel('players.xlsx')
     #player_gameweeks_df.to_excel('player_gameweeks.xlsx')
 
-    gameweeks_df.to_sql('gameweek', con=engine, if_exists='append', index=False)
+    #gameweeks_df.to_sql('gameweek', con=engine, if_exists='append', index=False)
+    my_team_df.to_sql('my_team', con=cnx, if_exists='append', index=False)
     #squads_df.to_sql('squad', con=cnx, if_exists='append', index=False)
     #squad_gameweeks_df.to_sql('squad_gameweek', con=cnx, if_exists='append', index=False)
     #players_df.to_sql('player', con=cnx, if_exists='append', index=False)
     #player_gameweeks_df.to_sql('player_gameweek', con=cnx, if_exists='append', index=False)
-
-    return gameweeks_df
 
 
 def trim_df(column_map, df: pd.DataFrame):
@@ -418,26 +417,33 @@ def get_my_team_data(me: Manager):
     """Returns my team df assembled from FPL API."""
 
     players = me.current_team.get_players()
+    bench = [i['element'] for i in me.current_team.team_summary['picks'] if i['multiplier'] == 0]
     data = []
     for player in players:
         player_name = player.first_name + ' ' + player.second_name
         is_captain = False
         is_vice_captain = False
+        is_benched = False
+
         if player.player_id == me.current_team.get_captain().player_id:
             is_captain = True
-        if player.player_id == me.current_team.get_vice_captain().player_id:
+        elif player.player_id == me.current_team.get_vice_captain().player_id:
             is_vice_captain = True
+
+        if player.player_id in bench:
+            is_benched = True
             
         data.append([
             Bootstrap.get_player_by_name(player_name)['id'],
             is_captain,
             is_vice_captain,
+            is_benched,
             None,
             None
         ])
 
     my_team_df = pd.DataFrame(
-        columns=['player_id', 'is_captain', 'is_vice_captain', 'purchase_price', 'selling_price'],
+        columns=['player_id', 'is_captain', 'is_vice_captain', 'is_benched', 'purchase_price', 'selling_price'],
         data=data
     )
 
@@ -461,9 +467,9 @@ def update_gameweek():
     update_from_file('update_gameweek.sql', args)
 
 
-if __name__ == '__main__':
-    update_gameweek()
-
-
 # if __name__ == '__main__':
-#     bulk_update()
+#     update_gameweek()
+
+
+if __name__ == '__main__':
+    bulk_update()

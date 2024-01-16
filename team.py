@@ -89,6 +89,7 @@ class Team:
                     if pick['is_captain']:
                         print('C')
                         if xp != 0:
+                            # If benched, multiplier = 0
                             xp *= pick['multiplier']
                             captain_found = True
                             captain_pts_added = True

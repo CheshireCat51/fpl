@@ -1,4 +1,5 @@
 import requests
+from requests import Session
 import time
 
 
