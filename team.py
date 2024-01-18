@@ -74,7 +74,7 @@ class Team:
         return self.transfers['bank']/10
     
 
-    def get_projected_points(self):
+    def get_projected_points(self, gw_id = Bootstrap.get_current_gw_id() + 1):
 
         """Sum of projected points of the starting 11 of the given team."""
 
@@ -83,13 +83,12 @@ class Team:
         captain_found = False
         for player in self.get_players():
             for pick in self.team_summary['picks']:
-                if pick['element'] == player.player_id and player.position != 'GKP':
-                    xp = player.get_projected_points()
+                if pick['element'] == player.player_id and pick['multiplier'] != 0 and player.position != 'GKP':
+                    xp = player.get_projected_points(gw_id)
                     # check that captain is not suspended, injured or out for another reason
                     if pick['is_captain']:
                         print('C')
                         if xp != 0:
-                            # If benched, multiplier = 0
                             xp *= pick['multiplier']
                             captain_found = True
                             captain_pts_added = True

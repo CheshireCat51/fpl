@@ -103,7 +103,8 @@ class Player:
 
     def get_expected_mins(self):
 
-        """Calculate expected mins based on mins already played this season and injury status."""
+        """Calculate expected mins based on mins already played this season and injury status.
+            Need to work out how to properly weight minutes played for recent matches."""
 
         mean_mins, std_mins, chance_of_playing = crud.read_expected_mins(self.player_id)
         mean_mins *= chance_of_playing/100
@@ -122,19 +123,22 @@ class Player:
         return mean_mins, std_mins
     
 
-    def get_projected_points(self):
+    def get_projected_points(self, gw_id = Bootstrap.get_current_gw_id() + 1):
 
-        """Use xG, xA and xGC to calculate xP for upcoming GW. Doesn't currently take into account BPS."""
+        """Use xMins, xG, xA and xGC to calculate xP for upcoming GW. 
+        Doesn't currently take into account BPS, saves, "fantasy" assists, yellow or red cards or penalties."""
 
         save_ev = 0
-        defensive_ev = 0
-        attacking_ev = self.get_attacking_returns()
-        mins_ev = self.get_mins_returns()
+        mean_mins, std_mins = self.get_expected_mins()
+        mins_ev = Player.get_mins_returns(mean_mins, std_mins)
+        attacking_ev = self.get_attacking_returns(mean_mins, gw_id)
 
-        if mins_ev != 0:
+        if mean_mins != 0:
             if self.position != 'FWD':
-                defensive_ev = self.get_defensive_returns()
-            total_ev = save_ev + defensive_ev + attacking_ev + mins_ev
+                defensive_ev = self.get_defensive_returns(gw_id)
+            else:
+                defensive_ev = 0
+            total_ev = (save_ev + defensive_ev + attacking_ev + mins_ev)
 
         else:
             total_ev = 0
@@ -142,11 +146,9 @@ class Player:
         return total_ev
     
 
-    def get_mins_returns(self) -> float:
+    def get_mins_returns(mean_mins, std_mins) -> float:
 
-        """Returns EV due to mins played. Assumes minutes follow Normal distribution. WORK OUT HOW TO GET STD."""
-
-        mean_mins, std_mins = self.get_expected_mins()
+        """Returns EV due to mins played. Assumes minutes follow normal distribution."""
 
         if std_mins > 0:
             if mean_mins > 0:
@@ -165,30 +167,35 @@ class Player:
                 return 0
 
 
-    def get_attacking_returns(self, gw_id: int = Bootstrap.get_current_gw_id() + 1) -> float:
+    def get_attacking_returns(self, mean_mins, gw_id: int) -> float:
 
-        """Returns EV due to attacking returns. Assumes Player plays 90 mins."""
+        """Returns EV due to attacking returns. Assumes Player plays 90 mins.
+            Need to adjust for finishing skill, team attack strength and opposition defence strength."""
 
         npxG_per_90, xA_per_90 = crud.read_attacking_stats_per_90(self.player_id)
 
         goal_ev = fpl_points_system[self.position]['Goal Scored']*npxG_per_90
         assist_ev = fpl_points_system['Other']['Assist']*xA_per_90
 
-        return goal_ev + assist_ev
+        # Return EV adjusted for expected mins as stats are per 90
+        return (goal_ev + assist_ev)*(mean_mins/90)
     
 
-    def get_defensive_returns(self, gw_id: int = Bootstrap.get_current_gw_id() + 1) -> float:
+    def get_defensive_returns(self, gw_id: int) -> float:
 
         """Returns EV due to defensive returns. Assumes goals follow Poisson distribution."""
 
         defensive_ev = 0
-        defence_strength = crud.read_defence_strength(self.prem_team_id)
-        opponent_attack_strength = crud.read_attack_strength(self.get_fixture()['id'])
-        mean_strength = (defence_strength+opponent_attack_strength)/2
+        defence_strength = crud.read_defence_strength(self.prem_team_id, gw_id)
+        opponent_attack_strength = crud.read_attack_strength(self.get_fixture(gw_id)['id'], gw_id)
+        mean_attack_strength, mean_defence_strength = crud.read_mean_strengths(gw_id)
+        
+        # Adjust defence strength (i.e. projected goals conceded) for attacking strength of opponent relative to the average prem team
+        adjusted_defence_strength = defence_strength*(((opponent_attack_strength-mean_attack_strength)/mean_attack_strength)+1)
 
         # Where i represents goals conceded...
         for i in range(0, 11):
-            prob_concede_i_goals = poisson_distribution(i, mean_strength)
+            prob_concede_i_goals = poisson_distribution(i, adjusted_defence_strength)
             if i == 0:
                 defensive_ev += prob_concede_i_goals*fpl_points_system[self.position]['Clean Sheet']
             else:

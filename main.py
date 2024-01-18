@@ -25,8 +25,10 @@ def main():
     #     print(haaland.get_expected_points(key))
     #     print('\n')
 
-    me = Manager(manager_id)
-    print('Me:', me.current_team.get_projected_points())
+    # me = Manager(manager_id)
+    # print('Me:', me.current_team.get_projected_points(21))
+    rival = Manager(2320475)
+    print('Rival:', rival.current_team.get_projected_points(21))
 
 
 # def solve_gk_problem(budget: float):

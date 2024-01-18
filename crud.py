@@ -26,6 +26,15 @@ def read_attack_strength(squad_id: int, gw_id: int = Bootstrap.get_current_gw_id
     return cnx.execute(text(f'SELECT attack_strength FROM squad_gameweek WHERE squad_id = {squad_id} AND gameweek_id = {gw_id}')).fetchone()[0]
 
 
+def read_mean_strengths(gw_id: int = Bootstrap.get_current_gw_id() + 1):
+
+    """Returns goals conceded against average prem opponent for given squad."""
+
+    results = cnx.execute(text(f'SELECT AVG(attack_strength), AVG(defence_strength) FROM squad_gameweek WHERE gameweek_id = {gw_id}')).fetchall()[0]
+
+    return (float(results[0]), float(results[1]))
+
+
 def read_expected_mins(player_id: int):
 
     """Returns mean mins played given that the player started and the std of these values."""
@@ -52,13 +61,13 @@ def read_attacking_stats_per_90(player_id: int):
                                 WHERE p.id = {player_id}')).fetchall()[0]
 
 
-def read_current_gw_id():
+# def read_current_gw_id():
 
-    """Returns current gw id."""
+#     """Returns current gw id."""
 
-    return cnx.execute(text(f'SELECT gw.id \
-                            FROM gameweek gw \
-                            WHERE gw.is_current = 1')).fetchone()[0]
+#     return cnx.execute(text(f'SELECT gw.id \
+#                             FROM gameweek gw \
+#                             WHERE gw.is_current = 1')).fetchone()[0]
 
 
 def update_from_file(query_file_path: str, args: tuple):
