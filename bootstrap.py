@@ -79,27 +79,27 @@ class Bootstrap:
         search_name = unidecode(search_name).lower()
         split_name = search_name.split(' ')
 
-        for player in Bootstrap.all_players:
-            player_full_name = unidecode(player['first_name'] + ' ' + player['second_name']).lower()
-            if player_full_name == search_name:
-                selected_player = player
-                break
-            elif search_name in player_full_name:
-                selected_player = player
-                break
-            elif split_name[0] in player_full_name and split_name[1] in player_full_name:
-                selected_player = player
-                break
-            elif search_name == player['web_name']:
-                selected_player = player
-                break
+        # Exception built for Rodri
+        if search_name == 'rodri':
+            return [i for i in Bootstrap.all_players if i['web_name'] == 'Rodrigo'][0]
+        else:
+            for player in Bootstrap.all_players:
+                player_full_name = unidecode(player['first_name'] + ' ' + player['second_name']).lower()
+                if search_name == player['web_name']:
+                    selected_player = player
+                    break
+                if player_full_name == search_name:
+                    selected_player = player
+                    break
+                elif search_name in player_full_name:
+                    selected_player = player
+                    break
+                elif split_name[0] in player_full_name and split_name[1] in player_full_name:
+                    selected_player = player
+                    break
 
-        return selected_player
+            return selected_player
     
 
 if __name__ == '__main__':
-    start_time = time.time()
-    Bootstrap.get_current_gw_id()
-    end_time = time.time()
-    exc_time = end_time - start_time
-    print(exc_time)
+    print(Bootstrap.get_player_by_name('Rodri'))

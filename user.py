@@ -1,5 +1,6 @@
 from manager import Manager
 import requests
+import json
 
 
 class User(Manager):
@@ -27,9 +28,9 @@ def generate_team_json(team_id):
 
         chips_url = f"{BASE_URL}/entry/{team_id}/history/"
         chips = session.get(chips_url).json()["chips"]
-        fh = [x for x in chips if x["name"] == "freehit"]
-        if fh:
-            fh = fh[0]["event"]
+        free_hit = [x for x in chips if x["name"] == "freehit"]
+        if free_hit:
+            free_hit = free_hit[0]["event"]
 
     # squad will remain an ID:purchase_price map throughout iteration over transfers
     # once they have been iterated through, can then add on the current selling price
@@ -37,30 +38,31 @@ def generate_team_json(team_id):
 
     itb = 1000 - sum(squad.values())
     for t in transfers:
-        if t["event"] == fh:
+        if t["event"] == free_hit:
             continue
         itb += t["element_out_cost"]
         itb -= t["element_in_cost"]
         del squad[t["element_out"]]
         squad[t["element_in"]] = t["element_in_cost"]
 
-    fts = calculate_fts(transfers, next_gw, fh)
+    free_transfers = get_free_transfers(transfers, next_gw, free_hit)
     my_data = {
         "chips": [],
         "picks": [],
         "team_id": team_id,
         "transfers": {
             "bank": itb,
-            "limit": fts,
+            "limit": free_transfers,
             "made": 0,
         }
     }
+
     for player_id, purchase_price in squad.items():
         now_cost = [x for x in static["elements"] if x["id"] == player_id][0]["now_cost"]
 
         diff = now_cost - purchase_price
         if diff > 0:
-            selling_price = purchase_price + diff // 2
+            selling_price = purchase_price + (diff // 2)
         else:
             selling_price = now_cost
 
@@ -71,22 +73,35 @@ def generate_team_json(team_id):
                 "selling_price": selling_price,
             }
         )
+
     return my_data
 
 
-def calculate_fts(transfers, next_gw, fh):
+def get_free_transfers(transfers, next_gw, free_hit):
+
+    """Returns number of free transfers."""
+
     n_transfers = {gw: 0 for gw in range(2, next_gw)}
+
     for t in transfers:
         n_transfers[t["event"]] += 1
-    fts = {gw: 0 for gw in range(2, next_gw + 1)}
-    fts[2] = 1
+        
+    free_transfers = {gw: 0 for gw in range(2, next_gw + 1)}
+    free_transfers[2] = 1
+
     for i in range(3, next_gw + 1):
-        if (i - 1) == fh:
-            fts[i] = 1
+        if (i - 1) == free_hit:
+            free_transfers[i] = 1
             continue
-        fts[i] = fts[i - 1]
-        fts[i] -= n_transfers[i - 1]
-        fts[i] = max(fts[i], 0)
-        fts[i] += 1
-        fts[i] = min(fts[i], 2)
-    return fts[next_gw]
+        free_transfers[i] = free_transfers[i - 1]
+        free_transfers[i] -= n_transfers[i - 1]
+        free_transfers[i] = max(free_transfers[i], 0)
+        free_transfers[i] += 1
+        free_transfers[i] = min(free_transfers[i], 2)
+
+    return free_transfers[next_gw]
+
+
+if __name__ == '__main__':
+    with open('my_team_data.json', 'w') as file:
+        json.dump(generate_team_json(4361245), file)

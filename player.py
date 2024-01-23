@@ -103,7 +103,7 @@ class Player:
 
     def get_expected_mins(self):
 
-        """Calculate expected mins based on mins already played this season and injury status.
+        """Calculate expected mins based on mins already played when a player has started this season and injury status.
             Need to work out how to properly weight minutes played for recent matches."""
 
         mean_mins, std_mins, chance_of_playing = crud.read_expected_mins(self.player_id)
@@ -126,7 +126,7 @@ class Player:
     def get_projected_points(self, gw_id = Bootstrap.get_current_gw_id() + 1):
 
         """Use xMins, xG, xA and xGC to calculate xP for upcoming GW. 
-        Doesn't currently take into account BPS, saves, "fantasy" assists, yellow or red cards or penalties."""
+        Doesn't currently take into account goalkeeper points, BPS, "fantasy" assists, yellow or red cards or penalties."""
 
         save_ev = 0
         mean_mins, std_mins = self.get_expected_mins()
@@ -146,7 +146,7 @@ class Player:
         return total_ev
     
 
-    def get_mins_returns(mean_mins, std_mins) -> float:
+    def get_mins_returns(mean_mins: float, std_mins: float) -> float:
 
         """Returns EV due to mins played. Assumes minutes follow normal distribution."""
 
@@ -167,18 +167,24 @@ class Player:
                 return 0
 
 
-    def get_attacking_returns(self, mean_mins, gw_id: int) -> float:
+    def get_attacking_returns(self, mean_mins: float, gw_id: int) -> float:
 
-        """Returns EV due to attacking returns. Assumes Player plays 90 mins.
-            Need to adjust for finishing skill, team attack strength and opposition defence strength."""
+        """Returns EV due to attacking returns. Assumes that adjustment affects every player in the team equally, regardless of position.
+            Need to adjust for finishing skill."""
 
         npxG_per_90, xA_per_90 = crud.read_attacking_stats_per_90(self.player_id)
+        #attack_strength = crud.read_attack_strength(self.prem_team_id, gw_id)
+        opponent_defence_strength = crud.read_defence_strength(self.get_fixture(gw_id)['id'], gw_id)
+        mean_attack_strength, mean_defence_strength = crud.read_mean_strengths(gw_id)
+
+        # Adjust for defensive strength of opposition
+        adjustment = ((opponent_defence_strength-mean_defence_strength)/mean_defence_strength)+1
 
         goal_ev = fpl_points_system[self.position]['Goal Scored']*npxG_per_90
         assist_ev = fpl_points_system['Other']['Assist']*xA_per_90
 
         # Return EV adjusted for expected mins as stats are per 90
-        return (goal_ev + assist_ev)*(mean_mins/90)
+        return (goal_ev + assist_ev)*(mean_mins/90)*adjustment
     
 
     def get_defensive_returns(self, gw_id: int) -> float:
@@ -206,6 +212,22 @@ class Player:
                     pass
 
         return defensive_ev
+    
+
+    def get_penalty_returns(self, mean_mins: float):
+
+        """Returns EV due to penalties considering likelihood of team winning a penalty, player taking it and converting it.
+            Assumes penalty has 0.76 xG and a maximum of 5 pens per squad per game. Need to adjust for player penalty conversion rate."""
+        
+        pen_ev = 0
+        pen_xG = 0.76
+        mean_pens_per_90, std_pens_per_90 = crud.read_penalty_stats_per_90(self.prem_team_id)
+        # NEED TO WORK OUT PROB OF PLAYER TAKING PEN!
+        for i in range(1, 6):
+            prob_attempt_i_pens = poisson_distribution(i, mean_pens_per_90)
+            pen_ev += prob_attempt_i_pens*pen_xG*fpl_points_system[self.position]['Goal Scored']*i
+
+        return pen_ev*(mean_mins/90)
     
 
     def get_rank_gain_per_point_scored(self):

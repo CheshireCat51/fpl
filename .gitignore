@@ -167,3 +167,6 @@ solution.txt
 # FBRef
 *.xlsx
 *.csv
+
+# Json
+my_team_data.json
