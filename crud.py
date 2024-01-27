@@ -12,21 +12,21 @@ cnx = engine.connect()
 write_conn = mysql.connector.connect(host='localhost', user='app', password=os.environ.get('DB_PASS'), database='fpl_model_23/24')
 
 
-def read_defence_strength(squad_id: int, gw_id: int = Bootstrap.get_current_gw_id() + 1):
+def read_defence_strength(squad_id: int, gw_id: int):
 
     """Returns goals conceded against average prem opponent for given squad."""
 
     return execute_from_str(f'SELECT defence_strength FROM squad_gameweek WHERE squad_id = {squad_id} AND gameweek_id = {gw_id}').fetchone()[0]
 
 
-def read_attack_strength(squad_id: int, gw_id: int = Bootstrap.get_current_gw_id() + 1):
+def read_attack_strength(squad_id: int, gw_id: int):
 
     """Returns goals scored against average prem opponent for given squad."""
 
     return execute_from_str(f'SELECT attack_strength FROM squad_gameweek WHERE squad_id = {squad_id} AND gameweek_id = {gw_id}').fetchone()[0]
 
 
-def read_mean_strengths(gw_id: int = Bootstrap.get_current_gw_id() + 1):
+def read_mean_strengths(gw_id: int):
 
     """Returns goals conceded against average prem opponent for given squad."""
 
@@ -52,6 +52,15 @@ def read_expected_mins(player_id: int):
     return (float(results[0]), float(results[1]), float(chance_of_playing))
 
 
+def read_start_proportion(player_id: int):
+
+    """Returns proportion that player started when they played."""
+
+    return float(execute_from_str(f'SELECT COUNT(pgw.started)/COUNT(pgw.id) \
+                                    FROM player_gameweek pgw \
+                                    WHERE pgw.player_id = {player_id}').fetchone()[0])
+
+
 def read_attacking_stats_per_90(player_id: int):
 
     """Returns attacking stats per 90."""
@@ -65,10 +74,19 @@ def read_penalty_stats_per_90(squad_id: int):
 
     """Returns mean and std of penalty attempts."""
 
-    return execute_from_str(f'SELECT AVG(pgw.penalty_attempts), STD(pgw.penalty_attempts) \
+    return float(execute_from_str(f'SELECT AVG(pgw.penalty_attempts) \
                                 FROM player p \
                                 JOIN player_gameweek pgw ON p.id = pgw.player_id \
-                                WHERE p.squad_id = {squad_id}').fetchall()[0]
+                                WHERE p.squad_id = {squad_id}').fetchone()[0])
+
+
+def read_all_player_ids():
+
+    """Returns all player ids."""
+
+    results = execute_from_str('SELECT id FROM player').fetchall()
+
+    return [i[0] for i in results]
 
 
 def execute_from_str(query_str: str):
@@ -86,9 +104,8 @@ def update_from_file(query_file_path: str, args: tuple):
         with open(f'./sql/{query_file_path}', 'r') as query_file:
             query = query_file.read()
 
-        cursor.execute(query, args)
-
-
-def insert_player():
-
-    """Insert player into database."""
+        filled_query = query % args
+        print(filled_query)
+        cursor.execute(filled_query)
+    
+    write_conn.commit()

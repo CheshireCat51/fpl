@@ -16,6 +16,7 @@ class Player:
         self.first_name = player['first_name']
         self.second_name = player['second_name']
         self.position = self.find_position()
+        self.penalty_rank = player['penalties_order']
 
         prem_team = Bootstrap.get_prem_team_by_id(self.player_summary['team'])
         self.prem_team_id = prem_team['id']
@@ -104,21 +105,12 @@ class Player:
     def get_expected_mins(self):
 
         """Calculate expected mins based on mins already played when a player has started this season and injury status.
-            Need to work out how to properly weight minutes played for recent matches."""
+            Need to work out how to properly weight minutes played for recent matches and how to work on likelihood of starting."""
 
         mean_mins, std_mins, chance_of_playing = crud.read_expected_mins(self.player_id)
-        mean_mins *= chance_of_playing/100
-
-        # if self.player_summary['status'] == 'a': # a = available
-        #     mean_mins, std_mins = crud.read_expected_mins(self.player_id)
-        # elif self.player_summary['status'] == 'd': # d = doubt
-        #     chance_of_playing = self.player_summary['chance_of_playing_next_round']
-        #     if chance_of_playing == None:
-        #         chance_of_playing = 0
-        #     mean_mins, std_mins = crud.read_expected_mins(self.player_id) * int(chance_of_playing)/100
-        # elif self.player_summary['status'] in ['i', 's', 'u']: # i = injured, u = not in prem anymore, s = suspended
-        #     mean_mins = 0
-        #     std_mins = 0
+        prob_start_given_playing = crud.read_start_proportion(self.player_id)
+        prob_play_and_start = (chance_of_playing/100)*prob_start_given_playing
+        mean_mins *= prob_play_and_start
 
         return mean_mins, std_mins
     
@@ -131,14 +123,16 @@ class Player:
         save_ev = 0
         mean_mins, std_mins = self.get_expected_mins()
         mins_ev = Player.get_mins_returns(mean_mins, std_mins)
+        print(mins_ev)
         attacking_ev = self.get_attacking_returns(mean_mins, gw_id)
+        pen_ev = self.get_penalty_returns(mean_mins)
 
         if mean_mins != 0:
             if self.position != 'FWD':
-                defensive_ev = self.get_defensive_returns(gw_id)
+                defensive_ev = self.get_defensive_returns(gw_id, mean_mins)
             else:
                 defensive_ev = 0
-            total_ev = (save_ev + defensive_ev + attacking_ev + mins_ev)
+            total_ev = (save_ev + defensive_ev + attacking_ev + pen_ev + mins_ev)
 
         else:
             total_ev = 0
@@ -152,7 +146,7 @@ class Player:
 
         if std_mins > 0:
             if mean_mins > 0:
-                less_than_60_ev = normal_distribution(mean_mins, std_mins, (-1000, 60))*fpl_points_system['Other']['< 60 mins']
+                less_than_60_ev = normal_distribution(mean_mins, std_mins, (0, 60))*fpl_points_system['Other']['< 60 mins']
                 more_than_60_ev = normal_distribution(mean_mins, std_mins, (60, 1000))*fpl_points_system['Other']['>= 60 mins']
                 return less_than_60_ev + more_than_60_ev
             else:
@@ -173,7 +167,6 @@ class Player:
             Need to adjust for finishing skill."""
 
         npxG_per_90, xA_per_90 = crud.read_attacking_stats_per_90(self.player_id)
-        #attack_strength = crud.read_attack_strength(self.prem_team_id, gw_id)
         opponent_defence_strength = crud.read_defence_strength(self.get_fixture(gw_id)['id'], gw_id)
         mean_attack_strength, mean_defence_strength = crud.read_mean_strengths(gw_id)
 
@@ -187,7 +180,7 @@ class Player:
         return (goal_ev + assist_ev)*(mean_mins/90)*adjustment
     
 
-    def get_defensive_returns(self, gw_id: int) -> float:
+    def get_defensive_returns(self, gw_id: int, mean_mins: float) -> float:
 
         """Returns EV due to defensive returns. Assumes goals follow Poisson distribution."""
 
@@ -211,7 +204,7 @@ class Player:
                     # print('Midfielder. No penalty for 2 or more goals conceded.')
                     pass
 
-        return defensive_ev
+        return defensive_ev*(mean_mins/90)
     
 
     def get_penalty_returns(self, mean_mins: float):
@@ -221,11 +214,19 @@ class Player:
         
         pen_ev = 0
         pen_xG = 0.76
-        mean_pens_per_90, std_pens_per_90 = crud.read_penalty_stats_per_90(self.prem_team_id)
-        # NEED TO WORK OUT PROB OF PLAYER TAKING PEN!
-        for i in range(1, 6):
-            prob_attempt_i_pens = poisson_distribution(i, mean_pens_per_90)
-            pen_ev += prob_attempt_i_pens*pen_xG*fpl_points_system[self.position]['Goal Scored']*i
+
+        if self.penalty_rank != None:
+            mean_pens_per_90 = crud.read_penalty_stats_per_90(self.prem_team_id)
+            prob_no_superior_pen_takers_on_pitch = 1
+            if self.penalty_rank != 1:
+                for pen_taker in [i for i in Bootstrap.all_players if i['team'] == self.prem_team_id and i['penalties_order'] != None]:
+                    # If the current pen taker is higher in the pecking order than self...
+                    if self.penalty_rank > pen_taker['penalties_order']:
+                        prob_no_superior_pen_takers_on_pitch *= (1-(crud.read_expected_mins(pen_taker['id'])[0]/90)) 
+
+            for i in range(1, 6):
+                prob_attempt_i_pens = poisson_distribution(i, mean_pens_per_90)
+                pen_ev += prob_no_superior_pen_takers_on_pitch*prob_attempt_i_pens*pen_xG*fpl_points_system[self.position]['Goal Scored']*i
 
         return pen_ev*(mean_mins/90)
     

@@ -85,7 +85,8 @@ class Bootstrap:
         else:
             for player in Bootstrap.all_players:
                 player_full_name = unidecode(player['first_name'] + ' ' + player['second_name']).lower()
-                if search_name == player['web_name']:
+                player_web_name = unidecode(player['web_name']).lower()
+                if search_name == player_web_name:
                     selected_player = player
                     break
                 if player_full_name == search_name:

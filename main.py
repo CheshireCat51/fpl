@@ -16,19 +16,24 @@ def main():
 
     """Entrypoint for FPL tracker."""
 
-    # haaland = Player(355)
+    haaland = Player(355)
     # print(Bootstrap.get_current_gw_id())
-    # print(haaland.get_expected_points(17))
+    print(haaland.get_projected_points())
 
     # for key, val in haaland.get_next_x_fixtures().items():
     #     print(val)
     #     print(haaland.get_expected_points(key))
     #     print('\n')
 
-    me = Manager(manager_id)
-    print('Me:', me.current_team.get_projected_points(21))
+    # me = Manager(manager_id)
+    # print('Me:', me.current_team.get_projected_points(22))
     # rival = Manager(2320475)
     # print('Rival:', rival.current_team.get_projected_points(21))
+
+    # brooks = Player(64)
+    # print(brooks.second_name)
+    # print(brooks.get_expected_mins())
+    # print(brooks.get_projected_points())
 
 
 # def solve_gk_problem(budget: float):

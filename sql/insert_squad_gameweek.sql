@@ -1,2 +1,0 @@
-INSERT INTO squad_gameweek (squad_id, gameweek_id, opposition_id, venue, overall_strength, overall_strength_change, attack_strength, attack_strength_change, defence_strength, defence_strength_change, xG, xGC)
-VALUES %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
