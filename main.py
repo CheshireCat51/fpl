@@ -30,7 +30,7 @@ def main():
     # rival = Manager(2320475)
     # print('Rival:', rival.current_team.get_projected_points(21))
 
-    brooks = Player(290)
+    brooks = Player(355)
     print(brooks.second_name)
     print(brooks.get_expected_mins(22))
     print(brooks.get_projected_points(22))

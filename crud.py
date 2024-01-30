@@ -1,7 +1,6 @@
 from dotenv import load_dotenv
 import os
 from sqlalchemy import create_engine, text
-from bootstrap import Bootstrap
 import mysql.connector
 
 
@@ -75,9 +74,9 @@ def read_penalty_stats_per_90(squad_id: int):
     """Returns penalty attempts per 90 for given squad."""
 
     return float(execute_from_str(f'SELECT AVG(pgw.penalty_attempts) \
-                                FROM player p \
-                                JOIN player_gameweek pgw ON p.id = pgw.player_id \
-                                WHERE p.squad_id = {squad_id}').fetchone()[0])
+                                    FROM player p \
+                                    JOIN player_gameweek pgw ON p.id = pgw.player_id \
+                                    WHERE p.squad_id = {squad_id}').fetchone()[0])
 
 
 def read_all_player_ids():
