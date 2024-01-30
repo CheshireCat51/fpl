@@ -35,14 +35,14 @@ def read_mean_strengths(gw_id: int):
     return (float(results[0]), float(results[1]))
 
 
-def read_expected_mins(player_id: int):
+def read_expected_mins(player_id: int, gw_id: int):
 
     """Returns mean mins played given that the player started and the std of these values."""
 
     results = execute_from_str(f'SELECT AVG(pgw.minutes_played), STD(pgw.minutes_played), p.chance_of_playing_next_gw \
                                 FROM player_gameweek pgw \
                                 JOIN player p ON pgw.player_id = p.id \
-                                WHERE pgw.started = 1 AND p.id = {player_id}').fetchall()[0]
+                                WHERE pgw.started = 1 AND pgw.gameweek_id < {gw_id} AND p.id = {player_id}').fetchall()[0]
     
     if results[2] == None:
         chance_of_playing = 100
@@ -52,13 +52,13 @@ def read_expected_mins(player_id: int):
     return (float(results[0]), float(results[1]), float(chance_of_playing))
 
 
-def read_start_proportion(player_id: int):
+def read_start_proportion(player_id: int, gw_id: int):
 
     """Returns proportion that player started when they played."""
 
-    return float(execute_from_str(f'SELECT COUNT(pgw.started)/COUNT(pgw.id) \
+    return float(execute_from_str(f'SELECT SUM(pgw.started)/COUNT(pgw.id) \
                                     FROM player_gameweek pgw \
-                                    WHERE pgw.player_id = {player_id}').fetchone()[0])
+                                    WHERE pgw.player_id = {player_id} AND pgw.gameweek_id < {gw_id}').fetchone()[0])
 
 
 def read_attacking_stats_per_90(player_id: int):
@@ -72,7 +72,7 @@ def read_attacking_stats_per_90(player_id: int):
 
 def read_penalty_stats_per_90(squad_id: int):
 
-    """Returns mean and std of penalty attempts."""
+    """Returns penalty attempts per 90 for given squad."""
 
     return float(execute_from_str(f'SELECT AVG(pgw.penalty_attempts) \
                                 FROM player p \

@@ -3,6 +3,7 @@ import os
 from dotenv import load_dotenv
 import math
 from scipy.integrate import quad
+import pandas as pd
 
 
 def init_session():
@@ -55,6 +56,13 @@ def format_deadline_str(deadline: str):
     deadline_str = deadline.replace('Z', '').replace('T', ' ')
 
     return deadline_str
+
+
+def format_null_args(args: list):
+
+    """Replace nan args with NULL such they are readable by MySQL."""
+
+    return ['NULL' if pd.isna(i) else i for i in args]
 
 
 fpl_points_system = {

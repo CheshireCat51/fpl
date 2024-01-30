@@ -6,7 +6,7 @@ from bootstrap import Bootstrap
 from manager import Manager
 from dotenv import load_dotenv
 import os
-from utils import format_deadline_str
+from utils import format_deadline_str, format_null_args
 from player import Player
 from crud import cnx, update_from_file, read_all_player_ids
 import time
@@ -123,12 +123,10 @@ def bulk_update():
 
     squad_gameweeks_df = pd.DataFrame()
     players_df = pd.DataFrame()
-    player_gameweeks_df = pd.DataFrame() 
+    player_gameweeks_df = pd.DataFrame()
 
     for squad in squad_rows:
         print(squad.text)
-        if squad.text == 'Aston Villa':
-            break
         squad_id = squads_df.loc[squads_df['name'] == squad.text, 'id'].item()
 
         # # Write squad gameweek breakdown to df
@@ -206,7 +204,7 @@ def bulk_update():
                         player_gameweek_df['points_scored'] = player_gameweek_df.apply(lambda row: fpl_player.get_points_scored(row['gameweek_id']), axis=1)
                         player_gameweeks_df = pd.concat([player_gameweeks_df, player_gameweek_df], axis=0)
 
-                time.sleep(5)
+            time.sleep(5)
 
     #gameweeks_df.to_excel('gameweeks.xlsx')
     #my_team_df.to_excel('my_team.xlsx')
@@ -303,24 +301,6 @@ def get_gameweek_id(row):
     round = row['gameweek_id']
 
     return int(round.split(' ')[1])
-
-
-# def get_projected_points(row, fpl_player: Player):
-
-#     """Returns projected points for upcoming gameweek."""
-
-#     gw_id = row['gameweek_id']
-
-#     if gw_id == Bootstrap.get_current_gw_id()+1:
-#         try:
-#             projected_points = fpl_player.get_projected_points(gw_id)
-#         except:
-#             print(f'No gameweeks found for player {row['player_id']}.')
-#             return None
-#         else:
-#             return projected_points
-#     else:
-#         return None
 
 
 def format_started_col(row):
@@ -488,10 +468,10 @@ def post_gameweek_update():
     #update_squad(squads_df)
     #update_player(players_df)
     #update_squad_gameweek(squad_gameweeks_df)
-    update_player_gameweek(player_gameweeks_df)
+    #update_player_gameweek(player_gameweeks_df)
     #insert_player_gameweek()
-    # update_gameweek(gameweeks_df)
-    # update_my_team()
+    #update_gameweek()
+    #update_my_team()
 
 
 def update_squad(squads_df: pd.DataFrame):
@@ -560,6 +540,7 @@ def insert_player_gameweek():
         try:
             args.append(Player(player_id).get_projected_points(current_gw_id+1))
         except:
+            print(f'Missing player_gameweek data for player {player_id}')
             args.append(None)
         args = format_null_args(args)
         update_from_file('insert_player_gameweek.sql', tuple(args))
@@ -588,25 +569,28 @@ def update_player_gameweek(player_gameweeks_df: pd.DataFrame):
                 row['player_id'],
                 row['gameweek_id']]
         args = format_null_args(args)
-        update_from_file('insert_player_gameweek.sql', (row['player_id'], row['gameweek_id'], 'NULL')) # TEMPORARY FIX! REMOVE BEFORE NEXT GAMEWEEK IF FIXED
+        # try:
+        #    projected_points = Player(row['player_id']).get_projected_points(current_gw_id)
+        # except:
+        #     print(f'Missing player_gameweek data for player {row['player_id']}')
+        #     projected_points = 'NULL'
+        # update_from_file('insert_player_gameweek.sql', (row['player_id'], row['gameweek_id'], projected_points)) # TEMPORARY FIX! REMOVE BEFORE NEXT GAMEWEEK IF FIXED
         update_from_file('update_player_gameweek.sql', tuple(args))
 
 
-def update_projected_points():
+def update_projected_points(gw_id: int):
 
     """Update projected points after changes to model."""
 
-    current_gw_id = Bootstrap.get_current_gw_id()
     all_player_ids = read_all_player_ids()
 
     for player_id in all_player_ids:
-        print(player_id)
         args = []
         try:
-            args.append(Player(player_id).get_projected_points(current_gw_id+1))
+            args.append(Player(player_id).get_projected_points(gw_id))
         except:
             args.append(None)
-        args.extend([int(player_id), int(current_gw_id+1)])
+        args.extend([player_id, gw_id])
         args = format_null_args(args)
         update_from_file('update_projected_points.sql', tuple(args))
 
@@ -619,26 +603,41 @@ def update_gameweek():
     current_gw = [i for i in Bootstrap.all_events if i['id'] == Bootstrap.get_current_gw_id()][0]
     gw_id = current_gw['id']
 
-    args = (me.manager_summary['summary_event_points'], 
-            current_gw['average_entry_score'],
-            gw_id,
-            me.current_team.get_projected_points(),
-            gw_id+1)
+    current_gw_args = (me.manager_summary['summary_event_points'], 
+                        current_gw['average_entry_score'],
+                        gw_id)
+    next_gw_args = (me.current_team.get_projected_points(),
+                    gw_id+1)
     
-    update_from_file('update_gameweek.sql', args)
+    update_from_file('update_previous_gameweek.sql', (gw_id-1))
+    update_from_file('update_current_gameweek.sql', current_gw_args)
+    update_from_file('update_next_gameweek.sql', next_gw_args)
 
 
 def update_my_team():
     
-    """Update player gameweek table."""
+    """Update my team table."""
 
+    my_team_df = get_my_team_data(Manager(os.environ.get('ME')))
+    i = 1
+    for index, row in my_team_df.iterrows():
+        args = [
+            row['player_id'],
+            row['is_captain'],
+            row['is_vice_captain'],
+            row['is_benched'],
+            row['purchase_price'],
+            row['selling_price'],
+            i
+        ]
+        args = format_null_args(args)
 
-def format_null_args(args: list):
+        update_from_file('update_my_team.sql', tuple(args))
 
-    """Replace nan args with NULL such they are readable by MySQL."""
-
-    return ['NULL' if pd.isna(i) else i for i in args]
+        i += 1
 
 
 if __name__ == '__main__':
-    post_gameweek_update()
+    #post_gameweek_update()
+    #update_projected_points(21)
+    update_my_team()
