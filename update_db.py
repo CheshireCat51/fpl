@@ -99,7 +99,7 @@ def bulk_update():
     load_dotenv()
 
     # Create client manager object
-    me = Manager(os.environ.get('ME'))
+    # me = Manager(os.environ.get('ME'))
 
     # # Create/update gameweek table
     # gameweeks_df = get_gameweek_data(me)
@@ -129,26 +129,24 @@ def bulk_update():
         print(squad.text)
         squad_id = squads_df.loc[squads_df['name'] == squad.text, 'id'].item()
 
-        # # Write squad gameweek breakdown to df
-        # squad_gameweek_soup = scrape_html(squad, 'matchlogs_for')
-        # squad_gameweek_df = get_df_from_soup(squad_gameweek_soup, header=0)
-        # squad_gameweek_df = squad_gameweek_df[squad_gameweek_df['Comp'] == 'Premier League']
-        # squad_gameweek_df = trim_df(squad_gw_column_map, squad_gameweek_df)
-        # squad_gameweek_df.insert(0, 'squad_id', squad_id)
-        # squad_gameweek_df['opposition_id'] = squad_gameweek_df.apply(get_squad_id, axis=1)
-        # squad_gameweek_df['gameweek_id'] = squad_gameweek_df.apply(get_gameweek_id, axis=1)
-        # squad_gameweek_df = squad_gameweek_df.drop('name', axis=1)
+        # Write squad gameweek breakdown to df
+        squad_gameweek_soup = scrape_html(squad, 'matchlogs_for')
+        squad_gameweek_df = get_df_from_soup(squad_gameweek_soup, header=0)
+        squad_gameweek_df = squad_gameweek_df[squad_gameweek_df['Comp'] == 'Premier League']
+        squad_gameweek_df = trim_df(squad_gw_column_map, squad_gameweek_df)
+        squad_gameweek_df.insert(0, 'squad_id', squad_id)
+        squad_gameweek_df['opposition_id'] = squad_gameweek_df.apply(get_squad_id, axis=1)
+        squad_gameweek_df['gameweek_id'] = squad_gameweek_df.apply(get_gameweek_id, axis=1)
+        squad_gameweek_df = squad_gameweek_df.drop('name', axis=1)
 
-        # # Get relevant rows to current squad from team strength df
-        # team_strength_df = team_strengths_df.loc[team_strengths_df['squad_id'] == squad_id]
-        # # Reset index such that strengths can be found by index
-        # team_strength_df = team_strength_df.reset_index()
-        # for strength_col in team_strength_column_map.values():
-        #     squad_gameweek_df.loc[squad_gameweek_df['gameweek_id'] == gw_id+1, strength_col] = team_strength_df.loc[0, strength_col]
+        # Get relevant rows to current squad from team strength df
+        team_strength_df = team_strengths_df.loc[team_strengths_df['squad_id'] == squad_id]
+        # Reset index such that strengths can be found by index
+        team_strength_df = team_strength_df.reset_index()
+        for strength_col in team_strength_column_map.values():
+            squad_gameweek_df.loc[squad_gameweek_df['gameweek_id'] == gw_id+1, strength_col] = team_strength_df.loc[0, strength_col]
 
-        # squad_gameweeks_df = pd.concat([squad_gameweeks_df, squad_gameweek_df], axis=0)
-
-        # time.sleep(3)
+        squad_gameweeks_df = pd.concat([squad_gameweeks_df, squad_gameweek_df], axis=0)
 
         # Write players from squad to df
         player_soup = scrape_html(squad, 'stats_standard_9')
@@ -204,7 +202,7 @@ def bulk_update():
                         player_gameweek_df['points_scored'] = player_gameweek_df.apply(lambda row: fpl_player.get_points_scored(row['gameweek_id']), axis=1)
                         player_gameweeks_df = pd.concat([player_gameweeks_df, player_gameweek_df], axis=0)
 
-            time.sleep(5)
+            time.sleep(4)
 
     #gameweeks_df.to_excel('gameweeks.xlsx')
     #my_team_df.to_excel('my_team.xlsx')
@@ -220,8 +218,7 @@ def bulk_update():
     #players_df.to_sql('player', con=cnx, if_exists='append', index=False)
     #player_gameweeks_df.to_sql('player_gameweek', con=cnx, if_exists='append', index=False)
                 
-    #return gameweeks_df, my_team_df, squads_df, squad_gameweeks_df, players_df, player_gameweeks_df
-    return squads_df, player_gameweeks_df
+    return squads_df, players_df, squad_gameweeks_df, player_gameweeks_df
 
 
 def trim_df(column_map, df: pd.DataFrame):
@@ -324,7 +321,7 @@ def get_elevenify_data():
 
     """Returns dataframe of team strengths from Elevenify."""
 
-    team_strength_df = pd.read_csv(f'UVKbs_{Bootstrap.get_current_gw_id()+1}.csv', sep=',', header=0)
+    team_strength_df = pd.read_csv(f'./elevenify/UVKbs_{Bootstrap.get_current_gw_id()+1}.csv', sep=',', header=0)
     team_strength_df = trim_df(team_strength_column_map, team_strength_df)
     strength_columns = team_strength_column_map.values()
     for col in strength_columns:
@@ -443,7 +440,7 @@ def get_my_team_data(me: Manager):
             is_benched = True
             
         data.append([
-            Bootstrap.get_player_by_name(player_name)['id'],
+            player.player_id,
             is_captain,
             is_vice_captain,
             is_benched,
@@ -463,15 +460,15 @@ def post_gameweek_update():
 
     """Update db immediately after gameweek ends."""
 
-    squads_df, player_gameweeks_df = bulk_update()
+    squads_df, players_df, squad_gameweeks_df, player_gameweeks_df = bulk_update()
 
-    #update_squad(squads_df)
-    #update_player(players_df)
-    #update_squad_gameweek(squad_gameweeks_df)
-    #update_player_gameweek(player_gameweeks_df)
-    #insert_player_gameweek()
-    #update_gameweek()
-    #update_my_team()
+    update_squad(squads_df)
+    update_player(players_df)
+    update_squad_gameweek(squad_gameweeks_df)
+    update_player_gameweek(player_gameweeks_df)
+    insert_player_gameweek()
+    update_gameweek()
+    update_my_team()
 
 
 def update_squad(squads_df: pd.DataFrame):
@@ -577,6 +574,9 @@ def update_player_gameweek(player_gameweeks_df: pd.DataFrame):
         # update_from_file('insert_player_gameweek.sql', (row['player_id'], row['gameweek_id'], projected_points)) # TEMPORARY FIX! REMOVE BEFORE NEXT GAMEWEEK IF FIXED
         update_from_file('update_player_gameweek.sql', tuple(args))
 
+    # Delete duplicate entries (often caused by players on loan from one squad to another e.g. Cole Palmer in 23/24)
+    update_from_file('delete_duplicates_player_gameweek.sql', tuple())
+
 
 def update_projected_points(gw_id: int):
 
@@ -619,6 +619,7 @@ def update_my_team():
     """Update my team table."""
 
     my_team_df = get_my_team_data(Manager(os.environ.get('ME')))
+    print(my_team_df)
     i = 1
     for index, row in my_team_df.iterrows():
         args = [
@@ -639,5 +640,4 @@ def update_my_team():
 
 if __name__ == '__main__':
     #post_gameweek_update()
-    #update_projected_points(21)
-    update_my_team()
+    update_projected_points(23)

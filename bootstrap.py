@@ -79,9 +79,11 @@ class Bootstrap:
         search_name = unidecode(search_name).lower()
         split_name = search_name.split(' ')
 
-        # Exception built for Rodri
+        # Exception built for...
         if search_name == 'rodri':
             return [i for i in Bootstrap.all_players if i['web_name'] == 'Rodrigo'][0]
+        elif search_name == 'kevin de bruyne':
+            return [i for i in Bootstrap.all_players if i['web_name'] == 'De Bruyne'][0]
         else:
             for player in Bootstrap.all_players:
                 player_full_name = unidecode(player['first_name'] + ' ' + player['second_name']).lower()
@@ -103,4 +105,4 @@ class Bootstrap:
     
 
 if __name__ == '__main__':
-    print(Bootstrap.get_player_by_name('Rodri'))
+    print(Bootstrap.get_player_by_name('Kevin De Bruyne'))

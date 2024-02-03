@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 import math
 from scipy.integrate import quad
 import pandas as pd
+from bootstrap import Bootstrap
 
 
 def init_session():
@@ -63,6 +64,18 @@ def format_null_args(args: list):
     """Replace nan args with NULL such they are readable by MySQL."""
 
     return ['NULL' if pd.isna(i) else i for i in args]
+
+
+def except_future_gw(gw_id: int):
+
+    """Return current gw_id if gw_id is in future. Used to fetch current team strength data."""
+
+    current_gw_id = Bootstrap.get_current_gw_id()
+
+    if gw_id > current_gw_id:
+        return current_gw_id
+    else:
+        return gw_id
 
 
 fpl_points_system = {

@@ -2,6 +2,7 @@ from dotenv import load_dotenv
 import os
 from sqlalchemy import create_engine, text
 import mysql.connector
+from utils import except_future_gw
 
 
 load_dotenv()
@@ -15,6 +16,8 @@ def read_defence_strength(squad_id: int, gw_id: int):
 
     """Returns goals conceded against average prem opponent for given squad."""
 
+    gw_id = except_future_gw(gw_id)
+
     return execute_from_str(f'SELECT defence_strength FROM squad_gameweek WHERE squad_id = {squad_id} AND gameweek_id = {gw_id}').fetchone()[0]
 
 
@@ -22,12 +25,16 @@ def read_attack_strength(squad_id: int, gw_id: int):
 
     """Returns goals scored against average prem opponent for given squad."""
 
+    gw_id = except_future_gw(gw_id)
+
     return execute_from_str(f'SELECT attack_strength FROM squad_gameweek WHERE squad_id = {squad_id} AND gameweek_id = {gw_id}').fetchone()[0]
 
 
 def read_mean_strengths(gw_id: int):
 
     """Returns goals conceded against average prem opponent for given squad."""
+
+    gw_id = except_future_gw(gw_id)
 
     results = execute_from_str(f'SELECT AVG(attack_strength), AVG(defence_strength) FROM squad_gameweek WHERE gameweek_id = {gw_id}').fetchall()[0]
 
@@ -55,7 +62,7 @@ def read_start_proportion(player_id: int, gw_id: int):
 
     """Returns proportion that player started when they played."""
 
-    return float(execute_from_str(f'SELECT SUM(pgw.started)/COUNT(pgw.id) \
+    return float(execute_from_str(f'SELECT AVG(pgw.started) \
                                     FROM player_gameweek pgw \
                                     WHERE pgw.player_id = {player_id} AND pgw.gameweek_id < {gw_id}').fetchone()[0])
 

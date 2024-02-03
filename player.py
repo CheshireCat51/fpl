@@ -105,7 +105,7 @@ class Player:
     def get_expected_mins(self, gw_id):
 
         """Calculate expected mins based on mins already played when a player has started this season and injury status.
-            Need to work out how to properly weight minutes played for recent matches and how to work on likelihood of starting."""
+            Need to work out how to properly weight minutes played for recent matches."""
 
         mean_mins, std_mins, chance_of_playing = crud.read_expected_mins(self.player_id, gw_id)
         prob_start_given_in_squad = crud.read_start_proportion(self.player_id, gw_id)
@@ -133,6 +133,11 @@ class Player:
             else:
                 defensive_ev = 0
             total_ev = save_ev + defensive_ev + attacking_ev + pen_ev + mins_ev
+
+            print(mins_ev)
+            print(defensive_ev)
+            print(attacking_ev)
+            print(pen_ev)
 
         else:
             total_ev = 0

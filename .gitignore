@@ -166,7 +166,9 @@ solution.txt
 
 # FBRef
 *.xlsx
-*.csv
+
+# Elevenify
+elevenify/
 
 # Json
 my_team_data.json

@@ -7,7 +7,6 @@ from bootstrap import Bootstrap
 from player import Player
 
 
-manager_id = 4361245
 player_df = pd.DataFrame.from_dict(Bootstrap.all_players, orient='columns')
 prem_team_df = pd.DataFrame.from_dict(Bootstrap.all_prem_teams, orient='columns')
 
@@ -16,9 +15,9 @@ def main():
 
     """Entrypoint for FPL tracker."""
 
-    # haaland = Player(355)
+    # haaland = Player(349)
     # # print(Bootstrap.get_current_gw_id())
-    # print(haaland.get_projected_points())
+    # print(haaland.get_expected_mins(23))
 
     # for key, val in haaland.get_next_x_fixtures().items():
     #     print(val)
@@ -30,10 +29,20 @@ def main():
     # rival = Manager(2320475)
     # print('Rival:', rival.current_team.get_projected_points(21))
 
-    brooks = Player(355)
-    print(brooks.second_name)
-    print(brooks.get_expected_mins(22))
-    print(brooks.get_projected_points(22))
+    # for player_id in [32, 36, 699, 48, 407, 427, 405, 131, 369]:
+    #     tot_xp = 0
+    #     player = Player(player_id)
+    #     print(player.second_name)
+    #     for gw_id in [23, 24, 25, 26]:
+    #         tot_xp += player.get_projected_points(gw_id)
+    #     print(player.current_price)
+    #     print(tot_xp)
+    #     print('\n')
+
+    estu = Player(362)
+    print(estu.second_name)
+    print(estu.get_expected_mins(23))
+    print(estu.get_projected_points(23))
 
 
 # def solve_gk_problem(budget: float):
