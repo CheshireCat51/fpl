@@ -104,8 +104,7 @@ class Player:
 
     def get_expected_mins(self, gw_id):
 
-        """Calculate expected mins based on mins already played when a player has started this season and injury status.
-            Need to work out how to properly weight minutes played for recent matches."""
+        """Calculate expected mins based on mins already played when a player has started this season and injury status."""
 
         mean_mins, std_mins, chance_of_playing = crud.read_expected_mins(self.player_id, gw_id)
         prob_start_given_in_squad = crud.read_start_proportion(self.player_id, gw_id)

@@ -24,8 +24,8 @@ def main():
     #     print(haaland.get_expected_points(key))
     #     print('\n')
 
-    # me = Manager(manager_id)
-    # print('Me:', me.current_team.get_projected_points(22))
+    me = Manager(os.environ.get('ME'))
+    print('Me:', me.current_team.get_projected_points(23))
     # rival = Manager(2320475)
     # print('Rival:', rival.current_team.get_projected_points(21))
 
@@ -39,10 +39,10 @@ def main():
     #     print(tot_xp)
     #     print('\n')
 
-    estu = Player(362)
-    print(estu.second_name)
-    print(estu.get_expected_mins(23))
-    print(estu.get_projected_points(23))
+    # estu = Player(85)
+    # print(estu.second_name)
+    # print(estu.get_expected_mins(23))
+    # print(estu.get_projected_points(23))
 
 
 # def solve_gk_problem(budget: float):
