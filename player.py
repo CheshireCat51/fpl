@@ -40,6 +40,17 @@ class Player:
         elif player_type == 4:
             position = 'FWD'
         return position
+    
+
+    def get_chance_of_playing(self) -> int:
+
+        """Returns chance of playing upcoming fixture."""
+
+        chance_of_playing = self.player_summary['chance_of_playing_next_round']
+        if chance_of_playing == None:
+            chance_of_playing = 100
+
+        return int(chance_of_playing)
 
     
     def get_next_x_fixtures(self, num_fixtures: int = 6):
@@ -54,25 +65,27 @@ class Player:
         return fixtures
     
 
-    def get_fixture(self, gw_id: int = Bootstrap.get_current_gw_id()+1):
+    def get_fixture(self, gw_id: int):
 
         """Get the fixture and difficulty for the given GW."""
 
-        fixture = Bootstrap.session.get(f'https://fantasy.premierleague.com/api/fixtures?team={self.prem_team_id}&event={gw_id}').json()[0]
-        opponent = {}
+        gameweek = Bootstrap.session.get(f'https://fantasy.premierleague.com/api/fixtures?team={self.prem_team_id}&event={gw_id}').json()
+        opponents = []
 
-        if fixture['team_a'] == self.prem_team_id: # if player's team are away team...
-            opponent = {
-                'id': fixture['team_h'],
-                'name': Bootstrap.get_prem_team_by_id(fixture['team_h'])['name']
-            }
-        else: # else if player's team are home team...
-            opponent = {
-                'id': fixture['team_a'],
-                'name': Bootstrap.get_prem_team_by_id(fixture['team_a'])['name']
-            }
+        for fixture in gameweek:
+            if fixture['team_a'] == self.prem_team_id: # if player's team are away team...
+                opponent = {
+                    'id': fixture['team_h'],
+                    'name': Bootstrap.get_prem_team_by_id(fixture['team_h'])['name']
+                }
+            else: # else if player's team are home team...
+                opponent = {
+                    'id': fixture['team_a'],
+                    'name': Bootstrap.get_prem_team_by_id(fixture['team_a'])['name']
+                }
+            opponents.append(opponent)
         
-        return opponent
+        return opponents
 
 
     # def get_stats(self):
@@ -106,7 +119,8 @@ class Player:
 
         """Calculate expected mins based on mins already played when a player has started this season and injury status."""
 
-        mean_mins, std_mins, chance_of_playing = crud.read_expected_mins(self.player_id, gw_id)
+        chance_of_playing = self.get_chance_of_playing()
+        mean_mins, std_mins = crud.read_expected_mins(self.player_id, gw_id)
         prob_start_given_in_squad = crud.read_start_proportion(self.player_id, gw_id)
         prob_play_and_start = (chance_of_playing/100)*prob_start_given_in_squad
         mean_mins *= prob_play_and_start
@@ -119,27 +133,30 @@ class Player:
         """Use xMins, xG, xA and xGC to calculate xP for upcoming GW. 
         Doesn't currently take into account goalkeeper points, BPS, "fantasy" assists, yellow cards or red cards."""
 
-        save_ev = 0
+        total_ev = 0
         mean_mins, std_mins = self.get_expected_mins(gw_id)
-        
-        mins_ev = Player.get_mins_returns(mean_mins, std_mins)
-        attacking_ev = self.get_attacking_returns(mean_mins, gw_id)
-        pen_ev = self.get_penalty_returns(mean_mins, gw_id)
+        mean_attack_strength, mean_defence_strength = crud.read_mean_strengths(gw_id)
 
         if mean_mins != 0:
-            if self.position != 'FWD':
-                defensive_ev = self.get_defensive_returns(mean_mins, gw_id)
-            else:
-                defensive_ev = 0
-            total_ev = save_ev + defensive_ev + attacking_ev + pen_ev + mins_ev
+            for fixture in self.get_fixture(gw_id):
+                opponent_id = fixture['id']
+            
+                save_ev = 0
+                mins_ev = Player.get_mins_returns(mean_mins, std_mins)
+                attacking_ev = self.get_attacking_returns(mean_mins, mean_defence_strength, opponent_id, gw_id)
+                pen_ev = self.get_penalty_returns(mean_mins, gw_id)
 
-            print(mins_ev)
-            print(defensive_ev)
-            print(attacking_ev)
-            print(pen_ev)
+                if self.position != 'FWD':
+                    defensive_ev = self.get_defensive_returns(mean_mins, mean_attack_strength, opponent_id, gw_id)
+                else:
+                    defensive_ev = 0
 
-        else:
-            total_ev = 0
+                total_ev += save_ev + mins_ev + defensive_ev + attacking_ev + pen_ev
+
+                print(mins_ev)
+                print(defensive_ev)
+                print(attacking_ev)
+                print(pen_ev)
         
         return total_ev
     
@@ -165,14 +182,13 @@ class Player:
                 return 0
 
 
-    def get_attacking_returns(self, mean_mins: float, gw_id: int) -> float:
+    def get_attacking_returns(self, mean_mins: float, mean_defence_strength: float, opponent_id: int, gw_id: int) -> float:
 
         """Returns EV due to attacking returns. Assumes that adjustment affects every player in the team equally, regardless of position.
             Need to adjust for finishing skill."""
 
         npxG_per_90, xA_per_90 = crud.read_attacking_stats_per_90(self.player_id)
-        opponent_defence_strength = crud.read_defence_strength(self.get_fixture(gw_id)['id'], gw_id)
-        mean_attack_strength, mean_defence_strength = crud.read_mean_strengths(gw_id)
+        opponent_defence_strength = crud.read_defence_strength(opponent_id, gw_id)
 
         # Adjust for defensive strength of opposition
         adjustment = ((opponent_defence_strength-mean_defence_strength)/mean_defence_strength)+1
@@ -184,14 +200,13 @@ class Player:
         return (goal_ev + assist_ev)*(mean_mins/90)*adjustment
     
 
-    def get_defensive_returns(self, mean_mins: float, gw_id: int) -> float:
+    def get_defensive_returns(self, mean_mins: float, mean_attack_strength: float, opponent_id: int, gw_id: int) -> float:
 
         """Returns EV due to defensive returns. Assumes goals follow Poisson distribution."""
 
         defensive_ev = 0
         defence_strength = crud.read_defence_strength(self.prem_team_id, gw_id)
-        opponent_attack_strength = crud.read_attack_strength(self.get_fixture(gw_id)['id'], gw_id)
-        mean_attack_strength, mean_defence_strength = crud.read_mean_strengths(gw_id)
+        opponent_attack_strength = crud.read_attack_strength(opponent_id, gw_id)
         
         # Adjust defence strength (i.e. projected goals conceded) for attacking strength of opponent relative to the average prem team
         adjusted_defence_strength = defence_strength*(((opponent_attack_strength-mean_attack_strength)/mean_attack_strength)+1)

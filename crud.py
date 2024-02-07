@@ -52,19 +52,12 @@ def read_expected_mins(player_id: int, gw_id: int):
     #                             WHERE pgw.started = 1 AND pgw.gameweek_id < {gw_id} AND p.id = {player_id}').fetchall()[0]
     
     results = execute_from_str(f'SELECT \
-                                    SUM(CASE WHEN ({gw_id}-6) <= pgw.gameweek_id THEN pgw.minutes_played * 0.7 ELSE pgw.minutes_played * 0.3 END)/SUM(CASE WHEN (23-6) <= pgw.gameweek_id THEN 0.7 ELSE 0.3 END), \
-                                    STD(pgw.minutes_played), \
-                                    p.chance_of_playing_next_gw \
+                                    SUM(CASE WHEN ({gw_id}-6) <= pgw.gameweek_id THEN pgw.minutes_played * 0.7 ELSE pgw.minutes_played * 0.3 END)/SUM(CASE WHEN ({gw_id}-6) <= pgw.gameweek_id THEN 0.7 ELSE 0.3 END), \
+                                    STD(pgw.minutes_played) \
                                 FROM player_gameweek pgw \
-                                JOIN player p ON pgw.player_id = p.id \
                                 WHERE pgw.player_id = {player_id} AND pgw.started = 1 AND pgw.gameweek_id < {gw_id}').fetchall()[0]
     
-    if results[2] == None:
-        chance_of_playing = 100
-    else:
-        chance_of_playing = results[2]
-    
-    return (float(results[0]), float(results[1]), float(chance_of_playing))
+    return (float(results[0]), float(results[1]))
 
 
 def read_start_proportion(player_id: int, gw_id: int):
@@ -111,7 +104,7 @@ def execute_from_str(query_str: str):
     return cnx.execute(text(query_str))
 
 
-def update_from_file(query_file_path: str, args: tuple):
+def execute_from_file(query_file_path: str, args: tuple):
 
     """Read SQL file, insert args and execute."""
     

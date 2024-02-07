@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 import os
 from utils import format_deadline_str, format_null_args
 from player import Player
-from crud import cnx, update_from_file, read_all_player_ids
+from crud import cnx, execute_from_file, read_all_player_ids
 import time
 
 
@@ -479,7 +479,7 @@ def update_squad(squads_df: pd.DataFrame):
         args = [row[i] for i in squad_column_map.values() if i != 'name']
         args.append(row['id'])
         args = format_null_args(args)
-        update_from_file('update_squad.sql', tuple(args))
+        execute_from_file('update_squad.sql', tuple(args))
 
 
 def update_player(players_df: pd.DataFrame):
@@ -494,7 +494,7 @@ def update_player(players_df: pd.DataFrame):
         args.append(row['chance_of_playing_next_gw'])
         args.append(row['id'])
         args = format_null_args(args)
-        update_from_file('update_player.sql', tuple(args))
+        execute_from_file('update_player.sql', tuple(args))
 
 
 def update_squad_gameweek(squad_gameweeks_df: pd.DataFrame):
@@ -513,7 +513,7 @@ def update_squad_gameweek(squad_gameweeks_df: pd.DataFrame):
             if row['gameweek_id'] == current_gw_id:
                 current_gw_args = [row['xG'], row['xGC'], row['squad_id'], row['gameweek_id']]
                 current_gw_args = format_null_args(current_gw_args)
-                update_from_file('update_current_squad_gameweek.sql', tuple(current_gw_args))
+                execute_from_file('update_current_squad_gameweek.sql', tuple(current_gw_args))
             elif row['gameweek_id'] == current_gw_id+1:
                 next_gw_args = [row['overall_strength'],
                                 row['attack_strength'],
@@ -521,7 +521,7 @@ def update_squad_gameweek(squad_gameweeks_df: pd.DataFrame):
                                 row['squad_id'],
                                 row['gameweek_id']]
                 next_gw_args = format_null_args(next_gw_args)
-                update_from_file('update_next_squad_gameweek.sql', tuple(next_gw_args))
+                execute_from_file('update_next_squad_gameweek.sql', tuple(next_gw_args))
 
 
 def insert_player_gameweek():
@@ -540,7 +540,7 @@ def insert_player_gameweek():
             print(f'Missing player_gameweek data for player {player_id}')
             args.append(None)
         args = format_null_args(args)
-        update_from_file('insert_player_gameweek.sql', tuple(args))
+        execute_from_file('insert_player_gameweek.sql', tuple(args))
 
 
 def update_player_gameweek(player_gameweeks_df: pd.DataFrame):
@@ -571,11 +571,11 @@ def update_player_gameweek(player_gameweeks_df: pd.DataFrame):
         # except:
         #     print(f'Missing player_gameweek data for player {row['player_id']}')
         #     projected_points = 'NULL'
-        # update_from_file('insert_player_gameweek.sql', (row['player_id'], row['gameweek_id'], projected_points)) # TEMPORARY FIX! REMOVE BEFORE NEXT GAMEWEEK IF FIXED
-        update_from_file('update_player_gameweek.sql', tuple(args))
+        # execute_from_file('insert_player_gameweek.sql', (row['player_id'], row['gameweek_id'], projected_points)) # TEMPORARY FIX! REMOVE BEFORE NEXT GAMEWEEK IF FIXED
+        execute_from_file('update_player_gameweek.sql', tuple(args))
 
     # Delete duplicate entries (often caused by players on loan from one squad to another e.g. Cole Palmer in 23/24)
-    update_from_file('delete_duplicates_player_gameweek.sql', tuple())
+    execute_from_file('delete_duplicates_player_gameweek.sql', tuple())
 
 
 def update_projected_points(gw_id: int):
@@ -592,7 +592,7 @@ def update_projected_points(gw_id: int):
             args.append(None)
         args.extend([player_id, gw_id])
         args = format_null_args(args)
-        update_from_file('update_projected_points.sql', tuple(args))
+        execute_from_file('update_projected_points.sql', tuple(args))
 
 
 def update_gameweek():
@@ -609,9 +609,9 @@ def update_gameweek():
     next_gw_args = (me.current_team.get_projected_points(),
                     gw_id+1)
     
-    update_from_file('update_previous_gameweek.sql', (gw_id-1))
-    update_from_file('update_current_gameweek.sql', current_gw_args)
-    update_from_file('update_next_gameweek.sql', next_gw_args)
+    execute_from_file('update_previous_gameweek.sql', (gw_id, gw_id))
+    execute_from_file('update_current_gameweek.sql', current_gw_args)
+    execute_from_file('update_next_gameweek.sql', next_gw_args)
 
 
 def update_my_team():
@@ -633,11 +633,12 @@ def update_my_team():
         ]
         args = format_null_args(args)
 
-        update_from_file('update_my_team.sql', tuple(args))
+        execute_from_file('update_my_team.sql', tuple(args))
 
         i += 1
 
 
 if __name__ == '__main__':
     #post_gameweek_update()
-    update_projected_points(23)
+    update_projected_points(24)
+    #update_my_team()

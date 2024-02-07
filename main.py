@@ -15,17 +15,16 @@ def main():
 
     """Entrypoint for FPL tracker."""
 
-    # haaland = Player(349)
-    # # print(Bootstrap.get_current_gw_id())
-    # print(haaland.get_expected_mins(23))
+    haaland = Player(355)
+    print(haaland.get_expected_mins(25))
+    print(haaland.get_projected_points(25))
 
-    # for key, val in haaland.get_next_x_fixtures().items():
-    #     print(val)
-    #     print(haaland.get_expected_points(key))
-    #     print('\n')
+    nunez = Player(757)
+    print(nunez.get_expected_mins(25))
+    print(nunez.get_projected_points(25))
 
-    me = Manager(os.environ.get('ME'))
-    print('Me:', me.current_team.get_projected_points(23))
+    # me = Manager(os.environ.get('ME'))
+    # print('Me:', me.current_team.get_projected_points(23))
     # rival = Manager(2320475)
     # print('Rival:', rival.current_team.get_projected_points(21))
 
