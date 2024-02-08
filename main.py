@@ -7,8 +7,8 @@ from bootstrap import Bootstrap
 from player import Player
 
 
-player_df = pd.DataFrame.from_dict(Bootstrap.all_players, orient='columns')
-prem_team_df = pd.DataFrame.from_dict(Bootstrap.all_prem_teams, orient='columns')
+# player_df = pd.DataFrame.from_dict(Bootstrap.all_players, orient='columns')
+# prem_team_df = pd.DataFrame.from_dict(Bootstrap.all_prem_teams, orient='columns')
 
 
 def main():
@@ -16,10 +16,12 @@ def main():
     """Entrypoint for FPL tracker."""
 
     haaland = Player(355)
+    print(haaland.second_name)
     print(haaland.get_expected_mins(25))
     print(haaland.get_projected_points(25))
 
-    nunez = Player(757)
+    nunez = Player(293)
+    print(nunez.second_name)
     print(nunez.get_expected_mins(25))
     print(nunez.get_projected_points(25))
 

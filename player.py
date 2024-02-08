@@ -44,7 +44,7 @@ class Player:
 
     def get_chance_of_playing(self) -> int:
 
-        """Returns chance of playing upcoming fixture."""
+        """Returns chance of playing next fixture."""
 
         chance_of_playing = self.player_summary['chance_of_playing_next_round']
         if chance_of_playing == None:
@@ -86,24 +86,6 @@ class Player:
             opponents.append(opponent)
         
         return opponents
-
-
-    # def get_stats(self):
-
-    #     stats = {'total': {}, 'per 90': {}}
-
-    #     for key in stats.keys():
-    #         if key == 'total':
-    #             suffix = ''
-    #         else:
-    #             suffix = '_per_90'
-    #             stats[key]['clean_sheets'] = self.player_summary[f'clean_sheets{suffix}']
-    #         stats[key]['xG'] = self.player_summary[f'expected_goals{suffix}']
-    #         stats[key]['xA'] = self.player_summary[f'expected_assists{suffix}']
-    #         stats[key]['xGI'] = self.player_summary[f'expected_goal_involvements{suffix}']
-    #         stats[key]['xGC'] = self.player_summary[f'expected_goals_conceded{suffix}']
-
-    #     return stats
     
 
     def get_points_scored(self, gw_id: int = Bootstrap.get_current_gw_id()-1):
@@ -143,15 +125,15 @@ class Player:
             
                 save_ev = 0
                 mins_ev = Player.get_mins_returns(mean_mins, std_mins)
-                attacking_ev = self.get_attacking_returns(mean_mins, mean_defence_strength, opponent_id, gw_id)
-                pen_ev = self.get_penalty_returns(mean_mins, gw_id)
+                attacking_ev = self.get_attacking_returns_per_90(mean_defence_strength, opponent_id, gw_id)
+                pen_ev = self.get_penalty_returns_per_90(gw_id)
 
                 if self.position != 'FWD':
-                    defensive_ev = self.get_defensive_returns(mean_mins, mean_attack_strength, opponent_id, gw_id)
+                    defensive_ev = self.get_defensive_returns_per_90(mean_attack_strength, opponent_id, gw_id)
                 else:
                     defensive_ev = 0
 
-                total_ev += save_ev + mins_ev + defensive_ev + attacking_ev + pen_ev
+                total_ev += mins_ev + (defensive_ev + attacking_ev + pen_ev + save_ev)*(mean_mins/90)
 
                 print(mins_ev)
                 print(defensive_ev)
@@ -182,7 +164,7 @@ class Player:
                 return 0
 
 
-    def get_attacking_returns(self, mean_mins: float, mean_defence_strength: float, opponent_id: int, gw_id: int) -> float:
+    def get_attacking_returns_per_90(self, mean_defence_strength: float, opponent_id: int, gw_id: int) -> float:
 
         """Returns EV due to attacking returns. Assumes that adjustment affects every player in the team equally, regardless of position.
             Need to adjust for finishing skill."""
@@ -197,10 +179,10 @@ class Player:
         assist_ev = fpl_points_system['Other']['Assist']*xA_per_90
 
         # Return EV adjusted for expected mins as stats are per 90
-        return (goal_ev + assist_ev)*(mean_mins/90)*adjustment
+        return (goal_ev + assist_ev)*adjustment
     
 
-    def get_defensive_returns(self, mean_mins: float, mean_attack_strength: float, opponent_id: int, gw_id: int) -> float:
+    def get_defensive_returns_per_90(self, mean_attack_strength: float, opponent_id: int, gw_id: int) -> float:
 
         """Returns EV due to defensive returns. Assumes goals follow Poisson distribution."""
 
@@ -223,10 +205,10 @@ class Player:
                     # print('Midfielder. No penalty for 2 or more goals conceded.')
                     pass
 
-        return defensive_ev*(mean_mins/90)
+        return defensive_ev
     
 
-    def get_penalty_returns(self, mean_mins: float, gw_id: int):
+    def get_penalty_returns_per_90(self, gw_id: int):
 
         """Returns EV due to penalties considering likelihood of team winning a penalty, player taking it and converting it.
             Assumes penalty has 0.76 xG and a maximum of 5 pens per squad per game. Need to adjust for player penalty conversion rate."""
@@ -247,7 +229,7 @@ class Player:
                 prob_attempt_i_pens = poisson_distribution(i, mean_pens_per_90)
                 pen_ev += prob_no_superior_pen_takers_on_pitch*prob_attempt_i_pens*pen_xG*fpl_points_system[self.position]['Goal Scored']*i
 
-        return pen_ev*(mean_mins/90)
+        return pen_ev
     
 
     def get_rank_gain_per_point_scored(self):
