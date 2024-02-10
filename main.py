@@ -15,35 +15,34 @@ def main():
 
     """Entrypoint for FPL tracker."""
 
-    haaland = Player(355)
-    print(haaland.second_name)
-    print(haaland.get_expected_mins(25))
-    print(haaland.get_projected_points(25))
+    # haaland = Player(355)
+    # print(haaland.second_name)
+    # print(haaland.get_expected_mins(25))
+    # print(haaland.get_projected_points(25))
 
     nunez = Player(293)
     print(nunez.second_name)
-    print(nunez.get_expected_mins(25))
-    print(nunez.get_projected_points(25))
+    print(nunez.get_expected_mins(24))
+    print(nunez.get_projected_points(24))
 
     # me = Manager(os.environ.get('ME'))
-    # print('Me:', me.current_team.get_projected_points(23))
-    # rival = Manager(2320475)
-    # print('Rival:', rival.current_team.get_projected_points(21))
+    # print('Me:', me.current_team.get_projected_points(24))
+    # # rival = Manager(2320475)
+    # # print('Rival:', rival.current_team.get_projected_points(24))
 
-    # for player_id in [32, 36, 699, 48, 407, 427, 405, 131, 369]:
+    # for player_id in [293, 85, 506, 60, 117]:
     #     tot_xp = 0
     #     player = Player(player_id)
     #     print(player.second_name)
-    #     for gw_id in [23, 24, 25, 26]:
+    #     for gw_id in [24, 25, 26]:
     #         tot_xp += player.get_projected_points(gw_id)
-    #     print(player.current_price)
     #     print(tot_xp)
     #     print('\n')
 
-    # estu = Player(85)
-    # print(estu.second_name)
-    # print(estu.get_expected_mins(23))
-    # print(estu.get_projected_points(23))
+    # porro = Player(506)
+    # print(porro.second_name)
+    # print(porro.get_expected_mins(24))
+    # print(porro.get_projected_points(24))
 
 
 # def solve_gk_problem(budget: float):

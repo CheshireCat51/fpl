@@ -639,6 +639,6 @@ def update_my_team():
 
 
 if __name__ == '__main__':
-    #post_gameweek_update()
-    update_projected_points(24)
+    post_gameweek_update()
+    #update_projected_points(24)
     #update_my_team()

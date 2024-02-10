@@ -135,10 +135,10 @@ class Player:
 
                 total_ev += mins_ev + (defensive_ev + attacking_ev + pen_ev + save_ev)*(mean_mins/90)
 
-                print(mins_ev)
-                print(defensive_ev)
-                print(attacking_ev)
-                print(pen_ev)
+                # print(mins_ev)
+                # print(defensive_ev)
+                # print(attacking_ev)
+                # print(pen_ev)
         
         return total_ev
     

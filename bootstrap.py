@@ -105,4 +105,4 @@ class Bootstrap:
     
 
 if __name__ == '__main__':
-    print(Bootstrap.get_player_by_name('Kevin De Bruyne'))
+    print(Bootstrap.get_player_by_name('Ivan Toney'))
