@@ -202,7 +202,7 @@ def bulk_update():
                         player_gameweek_df['points_scored'] = player_gameweek_df.apply(lambda row: fpl_player.get_points_scored(row['gameweek_id']), axis=1)
                         player_gameweeks_df = pd.concat([player_gameweeks_df, player_gameweek_df], axis=0)
 
-            time.sleep(4)
+            time.sleep(3.5)
 
     #gameweeks_df.to_excel('gameweeks.xlsx')
     #my_team_df.to_excel('my_team.xlsx')
