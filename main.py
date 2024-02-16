@@ -22,8 +22,24 @@ def main():
 
     nunez = Player(293)
     print(nunez.second_name)
-    print(nunez.get_expected_mins(24))
-    print(nunez.get_projected_points(24))
+    print(nunez.get_expected_mins(25))
+    print(nunez.get_projected_points(25))
+
+    salah = Player(308)
+    print(salah.second_name)
+    print(salah.get_expected_mins(25))
+    print(salah.get_projected_points(25))
+
+    salah = Player(362)
+    print(salah.second_name)
+    print(salah.get_expected_mins(25))
+    print(salah.get_projected_points(25))
+
+    salah = Player(508)
+    print(salah.second_name)
+    print(salah.get_expected_mins(25))
+    print(salah.get_projected_points(25))
+
 
     # me = Manager(os.environ.get('ME'))
     # print('Me:', me.current_team.get_projected_points(24))

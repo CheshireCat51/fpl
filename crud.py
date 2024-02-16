@@ -46,13 +46,12 @@ def read_expected_mins(player_id: int, gw_id: int):
     """Returns mean mins played given that the player started and the std of these values.
         Previous 6 gameweeks are weighted at 70% and all gameweeks prior to that at 30%."""
 
-    # results = execute_from_str(f'SELECT AVG(pgw.minutes_played), STD(pgw.minutes_played), p.chance_of_playing_next_gw \
-    #                             FROM player_gameweek pgw \
-    #                             JOIN player p ON pgw.player_id = p.id \
-    #                             WHERE pgw.started = 1 AND pgw.gameweek_id < {gw_id} AND p.id = {player_id}').fetchall()[0]
+    condition = f'pgw.gameweek_id >= ({gw_id}-6)'
+    last_6_weight = 0.7
+    older_weight = 0.3
     
     results = execute_from_str(f'SELECT \
-                                    SUM(CASE WHEN ({gw_id}-6) <= pgw.gameweek_id THEN pgw.minutes_played * 0.7 ELSE pgw.minutes_played * 0.3 END)/SUM(CASE WHEN ({gw_id}-6) <= pgw.gameweek_id THEN 0.7 ELSE 0.3 END), \
+                                    SUM(CASE WHEN {condition} THEN pgw.minutes_played * {last_6_weight} ELSE pgw.minutes_played * {older_weight} END)/SUM(CASE WHEN {condition} THEN {last_6_weight} ELSE {older_weight} END), \
                                     STD(pgw.minutes_played) \
                                 FROM player_gameweek pgw \
                                 WHERE pgw.player_id = {player_id} AND pgw.started = 1 AND pgw.gameweek_id < {gw_id}').fetchall()[0]

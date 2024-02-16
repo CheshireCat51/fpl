@@ -223,11 +223,13 @@ class Player:
                 for pen_taker in [i for i in Bootstrap.all_players if i['team'] == self.prem_team_id and i['penalties_order'] != None]:
                     # If the current pen taker is higher in the pecking order than self...
                     if self.penalty_rank > pen_taker['penalties_order']:
-                        prob_no_superior_pen_takers_on_pitch *= (1-(crud.read_expected_mins(pen_taker['id'], gw_id)[0]/90)) 
+                        prob_no_superior_pen_takers_on_pitch *= (1-(Player(pen_taker['id']).get_expected_mins(gw_id)[0]/90))
 
             for i in range(1, 6):
                 prob_attempt_i_pens = poisson_distribution(i, mean_pens_per_90)
-                pen_ev += prob_no_superior_pen_takers_on_pitch*prob_attempt_i_pens*pen_xG*fpl_points_system[self.position]['Goal Scored']*i
+                pen_ev += prob_attempt_i_pens*i
+
+            pen_ev *= prob_no_superior_pen_takers_on_pitch*pen_xG*fpl_points_system[self.position]['Goal Scored']
 
         return pen_ev
     

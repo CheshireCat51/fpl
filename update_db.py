@@ -10,6 +10,7 @@ from utils import format_deadline_str, format_null_args
 from player import Player
 from crud import cnx, execute_from_file, read_all_player_ids
 import time
+from datetime import datetime
 
 
 fbref_host = 'https://fbref.com'
@@ -36,6 +37,7 @@ squad_column_map = {
 }
 
 squad_gw_column_map = {
+    'Date': 'date',
     'Round': 'gameweek_id',
     'Opponent': 'name',
     'Venue': 'venue',
@@ -45,11 +47,8 @@ squad_gw_column_map = {
 
 team_strength_column_map = {
     '   Attack Strength': 'attack_strength',
-    # '+/-': 'attack_strength_change',
     ' Defence Strength': 'defence_strength',
-    # '+/-.1': 'defence_strength_change',
     ' Overall Strength': 'overall_strength'
-    # '+/-.2': 'overall_strength_change',  
 }
 
 player_column_map = {
@@ -76,6 +75,7 @@ player_column_map = {
 }
 
 player_gw_column_map = {
+    'Date': 'date',
     'Round': 'gameweek_id',
     'Start': 'started',
     'Min': 'minutes_played',
@@ -136,8 +136,9 @@ def bulk_update():
         squad_gameweek_df = trim_df(squad_gw_column_map, squad_gameweek_df)
         squad_gameweek_df.insert(0, 'squad_id', squad_id)
         squad_gameweek_df['opposition_id'] = squad_gameweek_df.apply(get_squad_id, axis=1)
-        squad_gameweek_df['gameweek_id'] = squad_gameweek_df.apply(get_gameweek_id, axis=1)
+        squad_gameweek_df['gameweek_id'] = squad_gameweek_df.apply(lambda row: get_gameweek_id(row, squad_gameweek_df), axis=1)
         squad_gameweek_df = squad_gameweek_df.drop('name', axis=1)
+        squad_gameweek_df = squad_gameweek_df.drop('date', axis=1)
 
         # Get relevant rows to current squad from team strength df
         team_strength_df = team_strengths_df.loc[team_strengths_df['squad_id'] == squad_id]
@@ -196,11 +197,13 @@ def bulk_update():
                         player_gameweek_df = player_gameweek_df.loc[player_gameweek_df['minutes_played'] != 'On matchday squad, but did not play']
                         player_gameweek_df.insert(0, 'player_id', fpl_player.player_id)
                         player_gameweek_df['started'] = player_gameweek_df.apply(format_started_col, axis=1)
-                        player_gameweek_df['gameweek_id'] = player_gameweek_df.apply(get_gameweek_id, axis=1)
+                        player_gameweek_df['gameweek_id'] = player_gameweek_df.apply(lambda row: get_gameweek_id(row, player_gameweek_df), axis=1)
                         player_gameweek_df.insert(0, 'projected_points', None)
                         #player_gameweek_df['projected_points'] = player_gameweek_df.apply(lambda row: get_projected_points(row, fpl_player), axis=1)
                         player_gameweek_df['points_scored'] = player_gameweek_df.apply(lambda row: fpl_player.get_points_scored(row['gameweek_id']), axis=1)
+                        player_gameweek_df = player_gameweek_df.drop('date', axis=1)
                         player_gameweeks_df = pd.concat([player_gameweeks_df, player_gameweek_df], axis=0)
+                        
 
             time.sleep(3.5)
 
@@ -291,13 +294,37 @@ def find_player(player_name) -> Player:
         return Player(player['id'])
 
 
-def get_gameweek_id(row):
+def get_gameweek_id(row, df):
 
-    """Returns gameweek id from FBRef table."""
+    """Returns gameweek id from FBRef table. WIP identifying B/DGW."""
 
-    round = row['gameweek_id']
+    # Reset index so that all rows are numbered consecutively
+    df = df.reset_index()
 
-    return int(round.split(' ')[1])
+    round = int(row['gameweek_id'].split(' ')[1])
+    date = row['date']
+
+    row_index = df[df['gameweek_id'] == row['gameweek_id']].index[0]
+
+    try:
+        preceeding_gw = df.iloc[row_index-1]
+    
+    except IndexError:
+        print('Preceeding gw not found.')
+        return round
+    
+    else:
+        
+        preceeding_round = int(preceeding_gw['gameweek_id'].split(' ')[1])
+        preceeding_date = preceeding_gw['date']
+
+        # Dealing with B/DGWs
+        # If match occurs after preceeding gameweek but its gw id is smaller than the preceeding gameweek then return gameweek id of preceeding gameweek
+        if date > preceeding_date and round < preceeding_round:
+            print(preceeding_round)
+            return preceeding_round
+        else:
+            return round
 
 
 def format_started_col(row):
@@ -639,6 +666,7 @@ def update_my_team():
 
 
 if __name__ == '__main__':
-    post_gameweek_update()
-    #update_projected_points(24)
+    #post_gameweek_update()
+    #update_projected_points(25)
     #update_my_team()
+    bulk_update()
