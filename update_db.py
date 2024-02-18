@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup, element
 from io import StringIO
 from bootstrap import Bootstrap
 from manager import Manager
+from user import User
 from dotenv import load_dotenv
 import os
 from utils import format_deadline_str, format_null_args
@@ -314,7 +315,6 @@ def get_gameweek_id(row, df):
         return round
     
     else:
-        
         preceeding_round = int(preceeding_gw['gameweek_id'].split(' ')[1])
         preceeding_date = preceeding_gw['date']
 
@@ -417,7 +417,7 @@ def get_next_level_rows(soup_table, tag_type: str, data_stat: str):
     return rows
     
 
-def get_gameweek_data(me: Manager):
+def get_gameweek_data(me: User):
 
     """Returns gameweek df assembled from FPL API data."""
 
@@ -445,18 +445,20 @@ def get_gameweek_data(me: Manager):
     return gameweeks_df
 
 
-def get_my_team_data(me: Manager):
+def get_my_team_data(me: User):
 
     """Returns my team df assembled from FPL API."""
 
     players = me.current_team.get_players()
     bench = [i['element'] for i in me.current_team.team_summary['picks'] if i['multiplier'] == 0]
+    prices = me.optim_data['picks']
     data = []
     for player in players:
-        player_name = player.first_name + ' ' + player.second_name
         is_captain = False
         is_vice_captain = False
         is_benched = False
+
+        asset = [i for i in prices if i['element'] == player.player_id][0]       
 
         if player.player_id == me.current_team.get_captain().player_id:
             is_captain = True
@@ -471,8 +473,8 @@ def get_my_team_data(me: Manager):
             is_captain,
             is_vice_captain,
             is_benched,
-            None,
-            None
+            asset['purchase_price'],
+            asset['selling_price']
         ])
 
     my_team_df = pd.DataFrame(
@@ -626,7 +628,7 @@ def update_gameweek():
 
     """Update gameweek table."""
 
-    me = Manager(os.environ.get('ME'))
+    me = User(os.environ.get('ME'))
     current_gw = [i for i in Bootstrap.all_events if i['id'] == Bootstrap.get_current_gw_id()][0]
     gw_id = current_gw['id']
 
@@ -645,8 +647,7 @@ def update_my_team():
     
     """Update my team table."""
 
-    my_team_df = get_my_team_data(Manager(os.environ.get('ME')))
-    print(my_team_df)
+    my_team_df = get_my_team_data(User(os.environ.get('ME')))
     i = 1
     for index, row in my_team_df.iterrows():
         args = [
@@ -668,5 +669,5 @@ def update_my_team():
 if __name__ == '__main__':
     #post_gameweek_update()
     #update_projected_points(25)
-    #update_my_team()
-    bulk_update()
+    update_my_team()
+    #bulk_update()

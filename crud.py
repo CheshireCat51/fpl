@@ -11,6 +11,10 @@ cnx = engine.connect()
 
 write_conn = mysql.connector.connect(host='localhost', user='app', password=os.environ.get('DB_PASS'), database='fpl_model_23/24')
 
+# Weights
+last_6_weight = 0.7
+older_weight = 0.3
+
 
 def read_defence_strength(squad_id: int, gw_id: int):
 
@@ -47,8 +51,6 @@ def read_expected_mins(player_id: int, gw_id: int):
         Previous 6 gameweeks are weighted at 70% and all gameweeks prior to that at 30%."""
 
     condition = f'pgw.gameweek_id >= ({gw_id}-6)'
-    last_6_weight = 0.7
-    older_weight = 0.3
     
     results = execute_from_str(f'SELECT \
                                     SUM(CASE WHEN {condition} THEN pgw.minutes_played * {last_6_weight} ELSE pgw.minutes_played * {older_weight} END)/SUM(CASE WHEN {condition} THEN {last_6_weight} ELSE {older_weight} END), \
@@ -63,7 +65,10 @@ def read_start_proportion(player_id: int, gw_id: int):
 
     """Returns proportion that player started when they played."""
 
-    return float(execute_from_str(f'SELECT AVG(pgw.started) \
+    condition = f'pgw.gameweek_id >= ({gw_id}-6)'
+
+    return float(execute_from_str(f'SELECT \
+                                        SUM(CASE WHEN {condition} THEN pgw.started * {last_6_weight} ELSE pgw.started * {older_weight} END)/SUM(CASE WHEN {condition} THEN {last_6_weight} ELSE {older_weight} END) \
                                     FROM player_gameweek pgw \
                                     WHERE pgw.player_id = {player_id} AND pgw.gameweek_id < {gw_id}').fetchone()[0])
 
