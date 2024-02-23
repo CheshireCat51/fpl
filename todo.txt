@@ -1,3 +1,3 @@
-- Deal with DGW and BGW when grabbing data from FBRef
-- Updating user Team
+
+- Add pgw and sgw row insertions for double gws
 - Get rid of unecessary price/ownership columns in tables

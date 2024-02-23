@@ -35,10 +35,10 @@ def main():
     # print(salah.get_expected_mins(25))
     # print(salah.get_projected_points(25))
 
-    debruyne = Player(349)
-    print(debruyne.second_name)
-    print(debruyne.get_expected_mins(25))
-    print(debruyne.get_projected_points(25))
+    # debruyne = Player(349)
+    # print(debruyne.second_name)
+    # print(debruyne.get_expected_mins(25))
+    # print(debruyne.get_projected_points(25))
 
 
     # me = Manager(os.environ.get('ME'))
@@ -46,14 +46,14 @@ def main():
     # # rival = Manager(2320475)
     # # print('Rival:', rival.current_team.get_projected_points(24))
 
-    # for player_id in [293, 85, 506, 60, 117]:
-    #     tot_xp = 0
-    #     player = Player(player_id)
-    #     print(player.second_name)
-    #     for gw_id in [24, 25, 26]:
-    #         tot_xp += player.get_projected_points(gw_id)
-    #     print(tot_xp)
-    #     print('\n')
+    for player_id in [545, 563, 32, 36, 129, 584]:
+        tot_xp = 0
+        player = Player(player_id)
+        print(player.second_name)
+        for gw_id in [26, 27, 28, 29]:
+            tot_xp += player.get_projected_points(gw_id)
+        print(tot_xp)
+        print('\n')
 
     # porro = Player(506)
     # print(porro.second_name)

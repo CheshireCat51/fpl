@@ -110,30 +110,32 @@ class Player:
         return mean_mins, std_mins
     
 
-    def get_projected_points(self, gw_id = Bootstrap.get_current_gw_id() + 1):
+    def get_projected_points(self, gw_id = Bootstrap.get_current_gw_id() + 1, fixture_indices: list = list(range(5))):
 
         """Use xMins, xG, xA and xGC to calculate xP for upcoming GW. 
-        Doesn't currently take into account goalkeeper points, BPS, "fantasy" assists, yellow cards or red cards."""
+        Doesn't currently take into account goalkeeper points, BPS, "fantasy" assists, yellow cards or red cards.
+        Assumes that a team will have a maximum of 5 fixtures in a gameweek."""
 
         total_ev = 0
         mean_mins, std_mins = self.get_expected_mins(gw_id)
         mean_attack_strength, mean_defence_strength = crud.read_mean_strengths(gw_id)
 
         if mean_mins != 0:
-            for fixture in self.get_fixture(gw_id):
-                opponent_id = fixture['id']
-            
-                save_ev = 0
-                mins_ev = Player.get_mins_returns(mean_mins, std_mins)
-                attacking_ev = self.get_attacking_returns_per_90(mean_defence_strength, opponent_id, gw_id)
-                pen_ev = self.get_penalty_returns_per_90(gw_id)
+            for index, fixture in enumerate(self.get_fixture(gw_id)):
+                if index in fixture_indices:
+                    opponent_id = fixture['id']
+                
+                    save_ev = 0
+                    mins_ev = Player.get_mins_returns(mean_mins, std_mins)
+                    attacking_ev = self.get_attacking_returns_per_90(mean_defence_strength, opponent_id, gw_id)
+                    pen_ev = self.get_penalty_returns_per_90(gw_id)
 
-                if self.position != 'FWD':
-                    defensive_ev = self.get_defensive_returns_per_90(mean_attack_strength, opponent_id, gw_id)
-                else:
-                    defensive_ev = 0
+                    if self.position != 'FWD':
+                        defensive_ev = self.get_defensive_returns_per_90(mean_attack_strength, opponent_id, gw_id)
+                    else:
+                        defensive_ev = 0
 
-                total_ev += mins_ev + (defensive_ev + attacking_ev + pen_ev + save_ev)*(mean_mins/90)
+                    total_ev += mins_ev + (defensive_ev + attacking_ev + pen_ev + save_ev)*(mean_mins/90)
 
                 # print(mins_ev)
                 # print(defensive_ev)
