@@ -536,12 +536,11 @@ def update_squad_gameweek(squad_gameweeks_df: pd.DataFrame):
     # For each squad...
     for i in range(1, 21):
         trimmed_df = squad_gameweeks_df[(squad_gameweeks_df['squad_id'] == i) & ((squad_gameweeks_df['gameweek_id'] == current_gw_id) | (squad_gameweeks_df['gameweek_id'] == current_gw_id+1))]
-        print(trimmed_df)
 
         # For each gameweek in current and next...
         for index, row in trimmed_df.iterrows():
             if row['gameweek_id'] == current_gw_id:
-                current_gw_args = [row['xG'], row['xGC'], row['squad_id'], row['gameweek_id']]
+                current_gw_args = [row['gameweek_id'], row['xG'], row['xGC'], row['squad_id'], row['opposition_id'], row['venue']]
                 current_gw_args = format_null_args(current_gw_args)
                 execute_from_file('update_current_squad_gameweek.sql', tuple(current_gw_args))
             elif row['gameweek_id'] == current_gw_id+1:
