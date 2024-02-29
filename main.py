@@ -41,19 +41,19 @@ def main():
     # print(debruyne.get_projected_points(25))
 
 
-    # me = Manager(os.environ.get('ME'))
-    # print('Me:', me.current_team.get_projected_points(24))
+    me = Manager(os.environ.get('ME'))
+    print('Me:', me.current_team.get_projected_points(27))
     # # rival = Manager(2320475)
     # # print('Rival:', rival.current_team.get_projected_points(24))
 
-    for player_id in [545, 563, 32, 36, 129, 584]:
-        tot_xp = 0
-        player = Player(player_id)
-        print(player.second_name)
-        for gw_id in [26, 27, 28, 29]:
-            tot_xp += player.get_projected_points(gw_id)
-        print(tot_xp)
-        print('\n')
+    # for player_id in [545, 563, 32, 36, 129, 584]:
+    #     tot_xp = 0
+    #     player = Player(player_id)
+    #     print(player.second_name)
+    #     for gw_id in [26, 27, 28, 29]:
+    #         tot_xp += player.get_projected_points(gw_id)
+    #     print(tot_xp)
+    #     print('\n')
 
     # porro = Player(506)
     # print(porro.second_name)

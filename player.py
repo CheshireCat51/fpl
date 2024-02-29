@@ -171,17 +171,23 @@ class Player:
         """Returns EV due to attacking returns. Assumes that adjustment affects every player in the team equally, regardless of position.
             Need to adjust for finishing skill."""
 
+        attacking_ev = 0
         npxG_per_90, xA_per_90 = crud.read_attacking_stats_per_90(self.player_id)
         opponent_defence_strength = crud.read_defence_strength(opponent_id, gw_id)
 
         # Adjust for defensive strength of opposition
         adjustment = ((opponent_defence_strength-mean_defence_strength)/mean_defence_strength)+1
+        adjusted_npxG = npxG_per_90*adjustment
+        adjusted_xA = xA_per_90*adjustment
 
-        goal_ev = fpl_points_system[self.position]['Goal Scored']*npxG_per_90
-        assist_ev = fpl_points_system['Other']['Assist']*xA_per_90
+        # Where i represents goals scored...
+        for i in range(0, 11):
+            prob_score_i_goals = poisson_distribution(i, adjusted_npxG)
+            prob_assist_i_goals = poisson_distribution(i, adjusted_xA)
+            attacking_ev += prob_score_i_goals*fpl_points_system[self.position]['Goal Scored'] + prob_assist_i_goals*fpl_points_system['Other']['Assist']
 
         # Return EV adjusted for expected mins as stats are per 90
-        return (goal_ev + assist_ev)*adjustment
+        return attacking_ev
     
 
     def get_defensive_returns_per_90(self, mean_attack_strength: float, opponent_id: int, gw_id: int) -> float:

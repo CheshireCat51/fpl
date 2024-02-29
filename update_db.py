@@ -172,7 +172,6 @@ def bulk_update():
 
         players_df = pd.concat([players_df, player_df], axis=0)
         players_df = players_df.reset_index(drop=True)
-        players_df = remove_duplicate_players(players_df)
 
         for j in range(len(player_rows)):
             player = player_rows[j]
@@ -192,7 +191,10 @@ def bulk_update():
                     player_gameweek_df = get_df_from_soup(player_gameweek_soup)
                     # Filter out non-prem games
                     player_gameweek_df = player_gameweek_df[player_gameweek_df['Comp'] == 'Premier League']
-                    if player_gameweek_df.empty == False:
+
+                    # Check that df is not empty and that the data is related to the player at their current squad
+                    # There could be confusion if a player is on loan from one prem team to another (e.g. Cole Palmer 23/24)
+                    if player_gameweek_df.empty == False and squad_id == fpl_player.prem_team_id:
                         player_gameweek_df = trim_df(player_gw_column_map, player_gameweek_df)
                         player_gameweek_df.insert(0, 'player_id', fpl_player.player_id)
                         player_gameweek_df['gameweek_id'] = player_gameweek_df.apply(lambda row: get_gameweek_id(row, player_gameweek_df), axis=1)
@@ -208,6 +210,8 @@ def bulk_update():
                         
 
             time.sleep(3.5)
+
+    players_df = remove_duplicate_players(players_df)
 
     #gameweeks_df.to_excel('gameweeks.xlsx')
     #my_team_df.to_excel('my_team.xlsx')
@@ -431,10 +435,10 @@ def get_gameweek_data(me: User):
         if event['is_current']:
             is_current = 1
             points_scored = me.manager_summary['summary_event_points']
-            projected_points = me.current_team.get_projected_points()
+            # projected_points = me.current_team.get_projected_points()
 
-        # if event['is_next']:
-        #     projected_points = me.current_team.get_projected_points()
+        if event['is_next']:
+            projected_points = me.current_team.get_projected_points(event['id'])
 
         data.append([event['id'], format_deadline_str(event['deadline_time']), is_current, projected_points, points_scored, event['average_entry_score']])
     
@@ -563,7 +567,7 @@ def insert_player_gameweek():
     for player_id in all_player_ids:
         player = Player(player_id)
         for index, fixture in enumerate(player.get_fixture(current_gw_id+1)):
-            args = [int(player_id), int(current_gw_id+1), fixture['id']]
+            args = [int(player_id), int(current_gw_id+1)]
             try:
                 args.append(Player(player_id).get_projected_points(current_gw_id+1, fixture_indices=[index]))
             except:
@@ -612,6 +616,7 @@ def update_projected_points(gw_id: int):
 
     """Update projected points after changes to model."""
 
+    me = User(os.environ.get('ME'))
     all_player_ids = read_all_player_ids()
 
     for player_id in all_player_ids:
@@ -623,6 +628,9 @@ def update_projected_points(gw_id: int):
         args.extend([player_id, gw_id])
         args = format_null_args(args)
         execute_from_file('update_projected_points.sql', tuple(args))
+
+    execute_from_file('update_next_gameweek.sql', 
+                      (me.current_team.get_projected_points(), Bootstrap.get_current_gw_id()+1))
 
 
 def update_gameweek():
@@ -670,6 +678,6 @@ def update_my_team():
 
 if __name__ == '__main__':
     post_gameweek_update()
-    #update_projected_points(25)
+    #update_projected_points(26)
     #update_my_team()
     #bulk_update()
