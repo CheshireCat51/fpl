@@ -57,8 +57,8 @@ def main():
 
     # porro = Player(506)
     # print(porro.second_name)
-    # print(porro.get_expected_mins(24))
-    # print(porro.get_projected_points(24))
+    # print(porro.get_expected_mins(27))
+    # print(porro.get_projected_points(27))
 
 
 # def solve_gk_problem(budget: float):

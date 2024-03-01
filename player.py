@@ -184,7 +184,7 @@ class Player:
         for i in range(0, 11):
             prob_score_i_goals = poisson_distribution(i, adjusted_npxG)
             prob_assist_i_goals = poisson_distribution(i, adjusted_xA)
-            attacking_ev += prob_score_i_goals*fpl_points_system[self.position]['Goal Scored'] + prob_assist_i_goals*fpl_points_system['Other']['Assist']
+            attacking_ev += i*(prob_score_i_goals*fpl_points_system[self.position]['Goal Scored'] + prob_assist_i_goals*fpl_points_system['Other']['Assist'])
 
         # Return EV adjusted for expected mins as stats are per 90
         return attacking_ev
