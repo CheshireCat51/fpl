@@ -101,6 +101,15 @@ def read_all_player_ids():
     return [i[0] for i in results]
 
 
+def read_player_gameweek_ids(gameweek_id: int, player_id: int):
+
+    """Returns player gameweek ids for given player on given gameweek."""
+
+    results = execute_from_str(f'SELECT id from player_gameweek WHERE gameweek_id = {gameweek_id} AND player_id = {player_id}')
+
+    return [i[0] for i in results]
+
+
 def execute_from_str(query_str: str):
 
     """Execute query from string."""

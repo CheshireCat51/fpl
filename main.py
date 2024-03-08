@@ -42,7 +42,7 @@ def main():
 
 
     me = Manager(os.environ.get('ME'))
-    print('Me:', me.current_team.get_projected_points(27))
+    print('Me:', me.current_team.get_projected_points(28))
     # # rival = Manager(2320475)
     # # print('Rival:', rival.current_team.get_projected_points(24))
 
