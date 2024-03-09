@@ -41,24 +41,29 @@ def main():
     # print(debruyne.get_projected_points(25))
 
 
-    me = Manager(os.environ.get('ME'))
-    print('Me:', me.current_team.get_projected_points(28))
+    # me = Manager(os.environ.get('ME'))
+    # print('Me:', me.current_team.get_projected_points(28))
     # # rival = Manager(2320475)
     # # print('Rival:', rival.current_team.get_projected_points(24))
 
-    # for player_id in [545, 563, 32, 36, 129, 584]:
-    #     tot_xp = 0
-    #     player = Player(player_id)
-    #     print(player.second_name)
-    #     for gw_id in [26, 27, 28, 29]:
-    #         tot_xp += player.get_projected_points(gw_id)
-    #     print(tot_xp)
-    #     print('\n')
+    for player_id in [86, 630, 89, 321, 203, 407, 526]:
+        tot_xp = 0
+        player = Player(player_id)
+        print(player.second_name)
+        for gw_id in [30, 31]:
+            tot_xp += player.get_projected_points(gw_id)
+        print(tot_xp)
+        print('\n')
 
     # porro = Player(506)
     # print(porro.second_name)
     # print(porro.get_expected_mins(27))
     # print(porro.get_projected_points(27))
+        
+    # bowen = Player(526)
+    # print(bowen.second_name)
+    # print(bowen.get_expected_mins(28))
+    # print(bowen.get_projected_points(28))
 
 
 # def solve_gk_problem(budget: float):

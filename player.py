@@ -137,10 +137,10 @@ class Player:
 
                     total_ev += mins_ev + (defensive_ev + attacking_ev + pen_ev + save_ev)*(mean_mins/90)
 
-                # print(mins_ev)
-                # print(defensive_ev)
-                # print(attacking_ev)
-                # print(pen_ev)
+                print('Mins:', mins_ev)
+                print('Def:', defensive_ev)
+                print('Attack:', attacking_ev)
+                print('Pen:', pen_ev)
         
         return total_ev
     
@@ -152,7 +152,7 @@ class Player:
         if std_mins > 0:
             if mean_mins > 0:
                 less_than_60_ev = normal_distribution(mean_mins, std_mins, (0, 60))*fpl_points_system['Other']['< 60 mins']
-                more_than_60_ev = normal_distribution(mean_mins, std_mins, (60, 1000))*fpl_points_system['Other']['>= 60 mins']
+                more_than_60_ev = normal_distribution(mean_mins, std_mins, (60, 120))*fpl_points_system['Other']['>= 60 mins']
                 return less_than_60_ev + more_than_60_ev
             else:
                 return 0
@@ -231,7 +231,11 @@ class Player:
                 for pen_taker in [i for i in Bootstrap.all_players if i['team'] == self.prem_team_id and i['penalties_order'] != None]:
                     # If the current pen taker is higher in the pecking order than self...
                     if self.penalty_rank > pen_taker['penalties_order']:
-                        prob_no_superior_pen_takers_on_pitch *= (1-(Player(pen_taker['id']).get_expected_mins(gw_id)[0]/90))
+                        try:
+                            pen_taker_player = Player(pen_taker['id'])
+                            prob_no_superior_pen_takers_on_pitch *= (1-(pen_taker_player.get_expected_mins(gw_id)[0]/90))
+                        except:
+                            print(f'Missing data for player {pen_taker_player.player_id}: {pen_taker_player.first_name + ' ' + pen_taker_player.second_name}')
 
             for i in range(1, 6):
                 prob_attempt_i_pens = poisson_distribution(i, mean_pens_per_90)
