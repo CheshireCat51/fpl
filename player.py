@@ -67,7 +67,7 @@ class Player:
 
     def get_fixture(self, gw_id: int):
 
-        """Get the fixture and difficulty for the given GW."""
+        """Get the fixture(s) for the given GW."""
 
         gameweek = Bootstrap.session.get(f'https://fantasy.premierleague.com/api/fixtures?team={self.prem_team_id}&event={gw_id}').json()
         opponents = []
@@ -88,13 +88,21 @@ class Player:
         return opponents
     
 
-    def get_points_scored(self, gw_id: int = Bootstrap.get_current_gw_id()-1):
+    def get_points_scored(self, gw_id: int = Bootstrap.get_current_gw_id(), opponent_id: int | None = None):
 
-        """Returns points scored in given gw."""
+        """Returns points scored in given gw. For DGW, opponent id can be specified to get points returned in specific game.
+            If opponent id not specified, returns total."""
+
+        total_gw_points = 0
 
         for event in self.player_details['history']:
             if event['round'] == int(gw_id):
-                return event['total_points']
+                if opponent_id == None:
+                    total_gw_points += event['total_points']
+                elif event['opponent_team'] == opponent_id:
+                    total_gw_points += event['total_points']
+        
+        return total_gw_points
     
 
     def get_expected_mins(self, gw_id):
@@ -113,8 +121,8 @@ class Player:
     def get_projected_points(self, gw_id = Bootstrap.get_current_gw_id() + 1, fixture_indices: list = list(range(5))):
 
         """Use xMins, xG, xA and xGC to calculate xP for upcoming GW. 
-        Doesn't currently take into account goalkeeper points, BPS, "fantasy" assists, yellow cards or red cards.
-        Assumes that a team will have a maximum of 5 fixtures in a gameweek."""
+            Doesn't currently take into account goalkeeper points, BPS, "fantasy" assists, yellow cards or red cards.
+            Assumes that a team will have a maximum of 5 fixtures in a gameweek."""
 
         total_ev = 0
         mean_mins, std_mins = self.get_expected_mins(gw_id)

@@ -70,7 +70,7 @@ def read_start_proportion(player_id: int, gw_id: int):
     return float(execute_from_str(f'SELECT \
                                         SUM(CASE WHEN {condition} THEN pgw.started * {last_6_weight} ELSE pgw.started * {older_weight} END)/SUM(CASE WHEN {condition} THEN {last_6_weight} ELSE {older_weight} END) \
                                     FROM player_gameweek pgw \
-                                    WHERE pgw.player_id = {player_id} AND pgw.gameweek_id < {gw_id}').fetchone()[0])
+                                    WHERE pgw.player_id = {player_id} AND pgw.started IS NOT NULL AND pgw.gameweek_id < {gw_id}').fetchone()[0])
 
 
 def read_attacking_stats_per_90(player_id: int):

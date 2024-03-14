@@ -101,6 +101,9 @@ class Team:
                     print('\n')
                     break
 
-        assert captain_pts_added == True
+        try:
+            assert captain_pts_added == True
+        except AssertionError:
+            print('Captain points not added.')
 
         return total_xp

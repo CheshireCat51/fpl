@@ -46,14 +46,14 @@ def main():
     # # rival = Manager(2320475)
     # # print('Rival:', rival.current_team.get_projected_points(24))
 
-    for player_id in [86, 630, 89, 321, 203, 407, 526]:
-        tot_xp = 0
-        player = Player(player_id)
-        print(player.second_name)
-        for gw_id in [30, 31]:
-            tot_xp += player.get_projected_points(gw_id)
-        print(tot_xp)
-        print('\n')
+    # for player_id in [86, 630, 89, 321, 203, 407, 526]:
+    #     tot_xp = 0
+    #     player = Player(player_id)
+    #     print(player.second_name)
+    #     for gw_id in [30, 31]:
+    #         tot_xp += player.get_projected_points(gw_id)
+    #     print(tot_xp)
+    #     print('\n')
 
     # porro = Player(506)
     # print(porro.second_name)
@@ -64,6 +64,11 @@ def main():
     # print(bowen.second_name)
     # print(bowen.get_expected_mins(28))
     # print(bowen.get_projected_points(28))
+        
+    son = Player(516)
+    print(son.second_name)
+    print(son.get_expected_mins(29))
+    print(son.get_projected_points(29))
 
 
 # def solve_gk_problem(budget: float):

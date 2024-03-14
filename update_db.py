@@ -493,13 +493,13 @@ def post_gameweek_update():
 
     """Update db immediately after gameweek ends."""
 
-    squads_df, players_df, squad_gameweeks_df, player_gameweeks_df = bulk_update()
+    #squads_df, players_df, squad_gameweeks_df, player_gameweeks_df = bulk_update()
 
-    update_squad(squads_df)
-    update_player(players_df)
-    update_squad_gameweek(squad_gameweeks_df)
-    update_player_gameweek(player_gameweeks_df)
-    insert_player_gameweek()
+    # update_squad(squads_df)
+    # update_player(players_df)
+    # update_squad_gameweek(squad_gameweeks_df)
+    # update_player_gameweek(player_gameweeks_df)
+    # insert_player_gameweek()
     update_gameweek()
     update_my_team()
 
@@ -701,7 +701,7 @@ def update_my_team():
 
 if __name__ == '__main__':
     #post_gameweek_update()
-    update_projected_points(28)
+    update_projected_points(29)
     #update_my_team()
 
     # for squad_id in range(1, 21):

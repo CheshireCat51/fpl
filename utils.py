@@ -70,10 +70,10 @@ def except_future_gw(gw_id: int):
 
     """Return current gw_id if gw_id is in future. Used to fetch current team strength data."""
 
-    current_gw_id = Bootstrap.get_current_gw_id()
+    next_gw_id = Bootstrap.get_current_gw_id()+1
 
-    if gw_id > current_gw_id:
-        return current_gw_id
+    if gw_id > next_gw_id:
+        return next_gw_id
     else:
         return gw_id
 
