@@ -1,4 +1,3 @@
 - Add pgw and sgw row insertions for double gws
-- Get rid of unecessary price/ownership columns in tables
 - Add team strengths to both fixtures in dgws
 - Ensure that data are collected for correct fixtures in dgws

@@ -166,9 +166,9 @@ def bulk_update():
         # Change id column to integer type
         player_df['id'] = player_df['id'].astype('int')
         player_df['position'] = player_df.apply(lambda row: Player(row['id']).position, axis=1)
-        player_df['ownership'] = player_df.apply(lambda row: Player(row['id']).ownership, axis=1)
-        player_df['current_price'] = player_df.apply(lambda row: Player(row['id']).current_price, axis=1)
-        player_df['chance_of_playing_next_gw'] = player_df.apply(lambda row: Player(row['id']).player_summary['chance_of_playing_next_round'], axis=1)
+        # player_df['ownership'] = player_df.apply(lambda row: Player(row['id']).ownership, axis=1)
+        # player_df['current_price'] = player_df.apply(lambda row: Player(row['id']).current_price, axis=1)
+        # player_df['chance_of_playing_next_gw'] = player_df.apply(lambda row: Player(row['id']).player_summary['chance_of_playing_next_round'], axis=1)
 
         players_df = pd.concat([players_df, player_df], axis=0)
         players_df = players_df.reset_index(drop=True)
@@ -493,14 +493,14 @@ def post_gameweek_update():
 
     """Update db immediately after gameweek ends."""
 
-    #squads_df, players_df, squad_gameweeks_df, player_gameweeks_df = bulk_update()
+    # squads_df, players_df, squad_gameweeks_df, player_gameweeks_df = bulk_update()
 
     # update_squad(squads_df)
     # update_player(players_df)
     # update_squad_gameweek(squad_gameweeks_df)
     # update_player_gameweek(player_gameweeks_df)
     # insert_player_gameweek()
-    update_gameweek()
+    # update_gameweek()
     update_my_team()
 
 
@@ -522,9 +522,9 @@ def update_player(players_df: pd.DataFrame):
     for index, row in players_df.iterrows():
         args = [row[i] for i in player_column_map.values() if i != 'name']
         args.pop(0)
-        args.append(row['ownership'])
-        args.append(row['current_price'])
-        args.append(row['chance_of_playing_next_gw'])
+        # args.append(row['ownership'])
+        # args.append(row['current_price'])
+        # args.append(row['chance_of_playing_next_gw'])
         args.append(row['id'])
         args = format_null_args(args)
         execute_from_file('update_player.sql', tuple(args))
@@ -535,11 +535,11 @@ def update_squad_gameweek(squad_gameweeks_df: pd.DataFrame):
     """Update squad gameweek table."""
 
     current_gw_id = Bootstrap.get_current_gw_id()
+    only_current_and_next_gw_df = squad_gameweeks_df[(squad_gameweeks_df['gameweek_id'] == current_gw_id) | (squad_gameweeks_df['gameweek_id'] == current_gw_id+1)]
 
     # For each squad...
     for i in range(1, 21):
-        trimmed_df = squad_gameweeks_df[(squad_gameweeks_df['squad_id'] == i) & ((squad_gameweeks_df['gameweek_id'] == current_gw_id) | (squad_gameweeks_df['gameweek_id'] == current_gw_id+1))]
-        #print(trimmed_df)
+        trimmed_df = only_current_and_next_gw_df[only_current_and_next_gw_df['squad_id'] == i]
 
         # For each gameweek in current and next...
         for index, row in trimmed_df.iterrows():
@@ -700,8 +700,8 @@ def update_my_team():
 
 
 if __name__ == '__main__':
-    #post_gameweek_update()
-    update_projected_points(29)
+    post_gameweek_update()
+    #update_projected_points(29)
     #update_my_team()
 
     # for squad_id in range(1, 21):
