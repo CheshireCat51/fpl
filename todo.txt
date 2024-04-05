@@ -1,3 +1,5 @@
 - Add pgw and sgw row insertions for double gws
 - Add team strengths to both fixtures in dgws
 - Ensure that data are collected for correct fixtures in dgws
+- Optimize team!
+- Reinsert player dgw data for gw 25 and 28 

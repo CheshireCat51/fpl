@@ -14,6 +14,12 @@ import time
 from datetime import datetime
 
 
+# Load environment vars
+load_dotenv()
+
+#current_gw_id = Bootstrap.get_current_gw_id()
+current_gw_id = 25
+
 fbref_host = 'https://fbref.com'
 
 squad_column_map = {
@@ -94,11 +100,6 @@ player_gw_column_map = {
 
 def bulk_update():
 
-    gw_id = Bootstrap.get_current_gw_id()
-
-    # Load environment vars
-    load_dotenv()
-
     # Create client manager object
     # me = Manager(os.environ.get('ME'))
 
@@ -120,7 +121,7 @@ def bulk_update():
     # Add squad ids to team strength df
     team_strengths_df.insert(0, 'squad_id', list(range(1, len(team_strengths_df.index)+1)))
     # Add next gw id (team strengths will be valid for upcoming gameweek)
-    team_strengths_df.insert(0, 'gameweek_id', gw_id+1)
+    team_strengths_df.insert(0, 'gameweek_id', current_gw_id+1)
 
     squad_gameweeks_df = pd.DataFrame()
     players_df = pd.DataFrame()
@@ -146,7 +147,7 @@ def bulk_update():
         # Reset index such that strengths can be found by index
         team_strength_df = team_strength_df.reset_index()
         for strength_col in team_strength_column_map.values():
-            squad_gameweek_df.loc[squad_gameweek_df['gameweek_id'] == gw_id+1, strength_col] = team_strength_df.loc[0, strength_col]
+            squad_gameweek_df.loc[squad_gameweek_df['gameweek_id'] == current_gw_id+1, strength_col] = team_strength_df.loc[0, strength_col]
 
         squad_gameweeks_df = pd.concat([squad_gameweeks_df, squad_gameweek_df], axis=0)
 
@@ -352,7 +353,7 @@ def get_elevenify_data():
 
     """Returns dataframe of team strengths from Elevenify."""
 
-    team_strength_df = pd.read_csv(f'./elevenify/UVKbs_{Bootstrap.get_current_gw_id()+1}.csv', sep=',', header=0)
+    team_strength_df = pd.read_csv(f'./elevenify/UVKbs_{current_gw_id+1}.csv', sep=',', header=0)
     team_strength_df = trim_df(team_strength_column_map, team_strength_df)
     strength_columns = team_strength_column_map.values()
     for col in strength_columns:
@@ -493,15 +494,15 @@ def post_gameweek_update():
 
     """Update db immediately after gameweek ends."""
 
-    # squads_df, players_df, squad_gameweeks_df, player_gameweeks_df = bulk_update()
+    squads_df, players_df, squad_gameweeks_df, player_gameweeks_df = bulk_update()
 
     # update_squad(squads_df)
     # update_player(players_df)
     # update_squad_gameweek(squad_gameweeks_df)
-    # update_player_gameweek(player_gameweeks_df)
+    update_player_gameweek(player_gameweeks_df)
     # insert_player_gameweek()
     # update_gameweek()
-    update_my_team()
+    # update_my_team()
 
 
 def update_squad(squads_df: pd.DataFrame):
@@ -534,7 +535,6 @@ def update_squad_gameweek(squad_gameweeks_df: pd.DataFrame):
 
     """Update squad gameweek table."""
 
-    current_gw_id = Bootstrap.get_current_gw_id()
     only_current_and_next_gw_df = squad_gameweeks_df[(squad_gameweeks_df['gameweek_id'] == current_gw_id) | (squad_gameweeks_df['gameweek_id'] == current_gw_id+1)]
 
     # For each squad...
@@ -581,7 +581,6 @@ def insert_player_gameweek():
 
     """Insert player gameweek row for next gameweek."""
 
-    current_gw_id = Bootstrap.get_current_gw_id()
     all_player_ids = read_all_player_ids()
 
     for player_id in all_player_ids:
@@ -600,8 +599,6 @@ def insert_player_gameweek():
 def update_player_gameweek(player_gameweeks_df: pd.DataFrame):
 
     """Update player gameweek row for gameweek just gone."""
-
-    current_gw_id = Bootstrap.get_current_gw_id()
 
     trimmed_df = player_gameweeks_df[player_gameweeks_df['gameweek_id'] == current_gw_id]
 
@@ -653,7 +650,7 @@ def update_projected_points(gw_id: int):
             args = format_null_args(args)
             execute_from_file('update_projected_points.sql', tuple(args))
 
-    execute_from_file('update_next_gameweek.sql', (me.current_team.get_projected_points(), Bootstrap.get_current_gw_id()+1))
+    execute_from_file('update_next_gameweek.sql', (me.current_team.get_projected_points(), current_gw_id+1))
 
 
 def update_gameweek():
@@ -661,14 +658,14 @@ def update_gameweek():
     """Update gameweek table."""
 
     me = User(os.environ.get('ME'))
-    current_gw = [i for i in Bootstrap.all_events if i['id'] == Bootstrap.get_current_gw_id()][0]
+    current_gw = [i for i in Bootstrap.all_events if i['id'] == current_gw_id][0]
     gw_id = current_gw['id']
 
     current_gw_args = (me.manager_summary['summary_event_points'], 
                         current_gw['average_entry_score'],
                         gw_id,
                         gw_id)
-    next_gw_args = (me.current_team.get_projected_points(),
+    next_gw_args = (me.current_team.get_projected_points(current_gw_id+1),
                     gw_id+1)
     
     execute_from_file('update_previous_gameweek.sql', (gw_id-1,))
@@ -701,7 +698,7 @@ def update_my_team():
 
 if __name__ == '__main__':
     post_gameweek_update()
-    #update_projected_points(29)
+    #update_projected_points(30)
     #update_my_team()
 
     # for squad_id in range(1, 21):
