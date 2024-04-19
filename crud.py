@@ -101,13 +101,20 @@ def read_all_player_ids():
     return [i[0] for i in results]
 
 
-def read_player_gameweek_ids(gameweek_id: int, player_id: int):
+# def read_player_gameweek_ids(gameweek_id: int, player_id: int):
+
+#     """Returns player gameweek ids for given player on given gameweek."""
+
+#     results = execute_from_str(f'SELECT id from player_gameweek WHERE gameweek_id = {gameweek_id} AND player_id = {player_id}')
+
+#     return [i[0] for i in results]
+
+
+def read_squad_gameweek_id(squad_id: int, gameweek_id: int, opposition_id: int):
 
     """Returns player gameweek ids for given player on given gameweek."""
 
-    results = execute_from_str(f'SELECT id from player_gameweek WHERE gameweek_id = {gameweek_id} AND player_id = {player_id}')
-
-    return [i[0] for i in results]
+    return int(execute_from_str(f'SELECT id from squad_gameweek WHERE squad_id = {squad_id} AND gameweek_id = {gameweek_id} AND opposition_id = {opposition_id}').fetchone()[0])
 
 
 def execute_from_str(query_str: str):

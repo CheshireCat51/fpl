@@ -145,10 +145,11 @@ class Player:
 
                     total_ev += mins_ev + (defensive_ev + attacking_ev + pen_ev + save_ev)*(mean_mins/90)
 
-                print('Mins:', mins_ev)
-                print('Def:', defensive_ev)
-                print('Attack:', attacking_ev)
-                print('Pen:', pen_ev)
+                    print('Mins:', mins_ev)
+                    print('### Per 90 ###')
+                    print('Defence:', defensive_ev)
+                    print('Attack:', attacking_ev)
+                    print('Penalty:', pen_ev)
         
         return total_ev
     
@@ -188,11 +189,13 @@ class Player:
         adjusted_npxG = npxG_per_90*adjustment
         adjusted_xA = xA_per_90*adjustment
 
-        # Where i represents goals scored...
-        for i in range(0, 11):
-            prob_score_i_goals = poisson_distribution(i, adjusted_npxG)
-            prob_assist_i_goals = poisson_distribution(i, adjusted_xA)
-            attacking_ev += i*(prob_score_i_goals*fpl_points_system[self.position]['Goal Scored'] + prob_assist_i_goals*fpl_points_system['Other']['Assist'])
+        # # Where i represents goals scored...
+        # for i in range(0, 11):
+        #     prob_score_i_goals = poisson_distribution(i, adjusted_npxG)
+        #     prob_assist_i_goals = poisson_distribution(i, adjusted_xA)
+        #     attacking_ev += i*(prob_score_i_goals*fpl_points_system[self.position]['Goal Scored'] + prob_assist_i_goals*fpl_points_system['Other']['Assist'])
+
+        attacking_ev = adjusted_npxG*fpl_points_system[self.position]['Goal Scored'] + adjusted_xA*fpl_points_system['Other']['Assist']
 
         return attacking_ev
     
