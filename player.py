@@ -113,9 +113,9 @@ class Player:
         mean_mins, std_mins = crud.read_expected_mins(self.player_id, gw_id)
         prob_start_given_in_squad = crud.read_start_proportion(self.player_id, gw_id)
         prob_play_and_start = (chance_of_playing/100)*prob_start_given_in_squad
-        mean_mins *= prob_play_and_start
+        x_mins = mean_mins*prob_play_and_start
 
-        return mean_mins, std_mins
+        return x_mins, std_mins
     
 
     def get_projected_points(self, gw_id = Bootstrap.get_current_gw_id() + 1, fixture_indices: list = list(range(5))):

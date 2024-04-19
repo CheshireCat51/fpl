@@ -43,16 +43,16 @@ def main():
 
     # Sarabia = 570
     # Eze = 226
-    tot_xp_all_player = 0
-    for player_id in [545, 5]:
-        tot_xp = 0
-        player = Player(player_id)
-        print(player.second_name)
-        for gw_id in [33, 34]:
-            tot_xp += player.get_projected_points(gw_id)
-        print(tot_xp)
-        tot_xp_all_player += tot_xp
-        print('\n')
+    # tot_xp_all_player = 0
+    # for player_id in [545, 5]:
+    #     tot_xp = 0
+    #     player = Player(player_id)
+    #     print(player.second_name)
+    #     for gw_id in [33, 34]:
+    #         tot_xp += player.get_projected_points(gw_id)
+    #     print(tot_xp)
+    #     tot_xp_all_player += tot_xp
+    #     print('\n')
 
     # porro = Player(506)
     # print(porro.second_name)
@@ -73,6 +73,11 @@ def main():
     # print(foden.second_name)
     # print(foden.get_expected_mins(32))
     # print(foden.get_projected_points(32))
+
+    diaz = Player(303)
+    print(diaz.second_name)
+    print(diaz.get_expected_mins(34))
+    print(diaz.get_projected_points(34))
 
 
 # def solve_gk_problem(budget: float):
