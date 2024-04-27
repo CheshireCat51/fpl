@@ -5,6 +5,7 @@ import pandas as pd
 # import sasoptpy as so
 from bootstrap import Bootstrap
 from player import Player
+import crud
 
 
 # player_df = pd.DataFrame.from_dict(Bootstrap.all_players, orient='columns')
@@ -74,11 +75,36 @@ def main():
     # print(foden.get_expected_mins(32))
     # print(foden.get_projected_points(32))
 
-    diaz = Player(303)
-    print(diaz.second_name)
-    print(diaz.get_expected_mins(34))
-    print(diaz.get_projected_points(34))
+    # diaz = Player(303)
+    # print(diaz.second_name)
+    # print(diaz.get_expected_mins(34))
+    # print(diaz.get_projected_points(34))
 
+    data = []
+
+    for player_id in crud.read_all_player_ids():
+        fpl_player = Player(player_id)
+        print(fpl_player.second_name)
+        print(fpl_player.player_id)
+        row = {
+            'Id': player_id,
+            'First name': fpl_player.first_name,
+            'Second name': fpl_player.second_name,
+            'Position': fpl_player.position
+        }
+        total_xp = 0
+        for gw_id in [35, 36, 37, 38]:
+            try:
+                xp = fpl_player.get_projected_points(gw_id)
+            except Exception as e:
+                xp = 0
+            total_xp += xp
+            row[f'{gw_id}xP'] = xp
+        row['TotalxP'] = total_xp
+        data.append(row)
+
+    post_wc_points = pd.DataFrame(columns=['Id', 'First name', 'Second name', 'Position', '35xP', '36xP', '37xP', '38xP', 'TotalxP'], data=data)
+    post_wc_points.to_excel('post_wc_points.xlsx')
 
 # def solve_gk_problem(budget: float):
 

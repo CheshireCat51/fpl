@@ -53,9 +53,9 @@ squad_gw_column_map = {
 }
 
 team_strength_column_map = {
-    '   Attack Strength': 'attack_strength',
-    ' Defence Strength': 'defence_strength',
-    ' Overall Strength': 'overall_strength'
+    '   Attack Rating': 'attack_strength',
+    ' Defence Rating': 'defence_strength',
+    ' Overall Rating': 'overall_strength'
 }
 
 player_column_map = {
@@ -84,6 +84,7 @@ player_column_map = {
 player_gw_column_map = {
     'Date': 'date',
     'Round': 'gameweek_id',
+    'Opponent': 'name',
     'Start': 'started',
     'Min': 'minutes_played',
     'Gls': 'goals',
@@ -199,13 +200,15 @@ def bulk_update():
                         player_gameweek_df = trim_df(player_gw_column_map, player_gameweek_df)
                         player_gameweek_df.insert(0, 'player_id', fpl_player.player_id)
                         player_gameweek_df['gameweek_id'] = player_gameweek_df.apply(lambda row: get_gameweek_id(row, player_gameweek_df), axis=1)
+                        player_gameweek_df['opposition_id'] = player_gameweek_df.apply(get_squad_id, axis=1)
                         # Remove rows where player was an unused substitute
                         player_gameweek_df = player_gameweek_df.loc[player_gameweek_df['minutes_played'] != 'On matchday squad, but did not play']
                         player_gameweek_df['started'] = player_gameweek_df.apply(format_started_col, axis=1)
                         # player_gameweek_df.insert(0, 'projected_points', None)
                         # player_gameweek_df['projected_points'] = player_gameweek_df.apply(lambda row: get_projected_points(row, fpl_player), axis=1)
-                        player_gameweek_df['points_scored'] = player_gameweek_df.apply(lambda row: fpl_player.get_points_scored(row['gameweek_id']), axis=1)
+                        player_gameweek_df['points_scored'] = player_gameweek_df.apply(lambda row: fpl_player.get_points_scored(row['gameweek_id'], row['opposition_id']), axis=1)
                         player_gameweek_df = player_gameweek_df.drop('date', axis=1)
+                        player_gameweek_df = player_gameweek_df.drop('name', axis=1)
                         
                         player_gameweeks_df = pd.concat([player_gameweeks_df, player_gameweek_df], axis=0)
                         
@@ -494,13 +497,13 @@ def post_gameweek_update():
 
     """Update db immediately after gameweek ends."""
 
-    #squads_df, players_df, squad_gameweeks_df, player_gameweeks_df = bulk_update()
+    squads_df, players_df, squad_gameweeks_df, player_gameweeks_df = bulk_update()
 
-    # update_squad(squads_df)
-    # update_player(players_df)
-    # update_squad_gameweek(squad_gameweeks_df)
-    # update_player_gameweek(player_gameweeks_df)
-    # insert_player_gameweek()
+    update_squad(squads_df)
+    update_player(players_df)
+    update_squad_gameweek(squad_gameweeks_df)
+    update_player_gameweek(player_gameweeks_df)
+    insert_player_gameweek()
     update_gameweek()
     update_my_team()
 
@@ -614,30 +617,30 @@ def update_player_gameweek(player_gameweeks_df: pd.DataFrame):
 
     for index, row in trimmed_df.iterrows():
         player = Player(row['player_id'])
-        for index, fixture in enumerate(player.get_fixture(current_gw_id)):
-            squad_gw_id = read_squad_gameweek_id(player.prem_team_id, current_gw_id, fixture['id'])
-            args = [row['started'],
-                    row['minutes_played'],
-                    row['goals'],
-                    row['assists'],
-                    row['penalty_goals'],
-                    row['penalty_attempts'],
-                    row['yellow_cards'],
-                    row['red_cards'],
-                    row['xG'],
-                    row['npxG'],
-                    row['xA'],
-                    row['points_scored'],
-                    player.player_id,
-                    squad_gw_id]
-            args = format_null_args(args)
-            # try:
-            #    projected_points = Player(row['player_id']).get_projected_points(current_gw_id)
-            # except:
-            #     print(f'Missing player_gameweek data for player {row['player_id']}')
-            #     projected_points = 'NULL'
-            # execute_from_file('insert_player_gameweek.sql', (row['player_id'], row['gameweek_id'], projected_points)) # TEMPORARY FIX! REMOVE BEFORE NEXT GAMEWEEK IF FIXED
-            execute_from_file('update_player_gameweek.sql', tuple(args))
+        # for index, fixture in enumerate(player.get_fixture(current_gw_id)):
+        squad_gw_id = read_squad_gameweek_id(player.prem_team_id, current_gw_id, row['opposition_id'])
+        args = [row['started'],
+                row['minutes_played'],
+                row['goals'],
+                row['assists'],
+                row['penalty_goals'],
+                row['penalty_attempts'],
+                row['yellow_cards'],
+                row['red_cards'],
+                row['xG'],
+                row['npxG'],
+                row['xA'],
+                row['points_scored'],
+                player.player_id,
+                squad_gw_id]
+        args = format_null_args(args)
+        # try:
+        #    projected_points = Player(row['player_id']).get_projected_points(current_gw_id)
+        # except:
+        #     print(f'Missing player_gameweek data for player {row['player_id']}')
+        #     projected_points = 'NULL'
+        # execute_from_file('insert_player_gameweek.sql', (row['player_id'], row['gameweek_id'], projected_points)) # TEMPORARY FIX! REMOVE BEFORE NEXT GAMEWEEK IF FIXED
+        execute_from_file('update_player_gameweek.sql', tuple(args))
 
     # Delete duplicate entries (often caused by players on loan from one squad to another e.g. Cole Palmer in 23/24)
     #execute_from_file('delete_duplicates_player_gameweek.sql', tuple())

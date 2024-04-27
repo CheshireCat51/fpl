@@ -88,7 +88,7 @@ class Player:
         return opponents
     
 
-    def get_points_scored(self, gw_id: int = Bootstrap.get_current_gw_id(), opponent_id: int | None = None):
+    def get_points_scored(self, gw_id: int = Bootstrap.get_current_gw_id(), opposition_id: int | None = None):
 
         """Returns points scored in given gw. For DGW, opponent id can be specified to get points returned in specific game.
             If opponent id not specified, returns total."""
@@ -97,9 +97,9 @@ class Player:
 
         for event in self.player_details['history']:
             if event['round'] == int(gw_id):
-                if opponent_id == None:
+                if opposition_id == None:
                     total_gw_points += event['total_points']
-                elif event['opponent_team'] == opponent_id:
+                elif event['opponent_team'] == opposition_id:
                     total_gw_points += event['total_points']
         
         return total_gw_points
