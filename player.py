@@ -15,6 +15,7 @@ class Player:
         self.player_id = player_id
         self.first_name = player['first_name']
         self.second_name = player['second_name']
+        self.full_name = self.first_name + ' ' + self.second_name
         self.position = self.find_position()
         self.penalty_rank = player['penalties_order']
 
@@ -110,8 +111,8 @@ class Player:
         """Calculate expected mins based on mins already played when a player has started this season and injury status."""
 
         chance_of_playing = self.get_chance_of_playing()
-        mean_mins, std_mins = crud.read_expected_mins(self.player_id, gw_id)
-        prob_start_given_in_squad = crud.read_start_proportion(self.player_id, gw_id)
+        mean_mins, std_mins = crud.read_expected_mins(self.player_id, self.full_name, gw_id)
+        prob_start_given_in_squad = crud.read_start_proportion(self.player_id, self.full_name, gw_id)
         prob_play_and_start = (chance_of_playing/100)*prob_start_given_in_squad
         x_mins = mean_mins*prob_play_and_start
 
@@ -181,7 +182,7 @@ class Player:
             Need to adjust for finishing skill."""
 
         attacking_ev = 0
-        npxG_per_90, xA_per_90 = crud.read_attacking_stats_per_90(self.player_id)
+        npxG_per_90, xA_per_90 = crud.read_attacking_stats_per_90(self.player_id, self.full_name)
         opponent_defence_strength = crud.read_defence_strength(opponent_id, gw_id)
 
         # Adjust for defensive strength of opposition
@@ -235,7 +236,7 @@ class Player:
         pen_xG = 0.76
 
         if self.penalty_rank != None:
-            mean_pens_per_90 = crud.read_penalty_stats_per_90(self.prem_team_id)
+            mean_pens_per_90 = crud.read_penalty_stats_per_90(self.prem_team_id, self.prem_team_name)
             prob_no_superior_pen_takers_on_pitch = 1
             if self.penalty_rank != 1:
                 for pen_taker in [i for i in Bootstrap.all_players if i['team'] == self.prem_team_id and i['penalties_order'] != None]:

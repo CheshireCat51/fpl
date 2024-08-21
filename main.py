@@ -83,9 +83,11 @@ def main():
     data = []
 
     for player_id in crud.read_all_player_ids():
-        fpl_player = Player(player_id)
-        print(fpl_player.second_name)
-        print(fpl_player.player_id)
+        try:
+            fpl_player = Player(player_id)
+        except:
+            continue
+        print(fpl_player.player_id, fpl_player.second_name)
         row = {
             'Id': player_id,
             'First name': fpl_player.first_name,
@@ -93,7 +95,7 @@ def main():
             'Position': fpl_player.position
         }
         total_xp = 0
-        for gw_id in [35, 36, 37, 38]:
+        for gw_id in [1, 2, 3, 4, 5, 6]:
             try:
                 xp = fpl_player.get_projected_points(gw_id)
             except Exception as e:
@@ -103,8 +105,8 @@ def main():
         row['TotalxP'] = total_xp
         data.append(row)
 
-    post_wc_points = pd.DataFrame(columns=['Id', 'First name', 'Second name', 'Position', '35xP', '36xP', '37xP', '38xP', 'TotalxP'], data=data)
-    post_wc_points.to_excel('post_wc_points.xlsx')
+    post_wc_points = pd.DataFrame(columns=['Id', 'First name', 'Second name', 'Position', '1xP','2xP','3xP','4xP','5xP','6xP', 'TotalxP'], data=data)
+    post_wc_points.to_excel('first_six_pts.xlsx')
 
 # def solve_gk_problem(budget: float):
 
