@@ -54,9 +54,9 @@ squad_gw_column_map = {
 }
 
 team_strength_column_map = {
-    'Attack ⚔️': 'attack_strength',
-    'Defence 🛡️': 'defence_strength',
-    'Overall ⚖️': 'overall_strength'
+    'Attack': 'attack_strength',
+    'Defence': 'defence_strength',
+    'Overall': 'overall_strength'
 }
 
 player_column_map = {
@@ -102,11 +102,11 @@ player_gw_column_map = {
 
 def bulk_update():
 
-    # Create/update gameweek table
-    gameweeks_df = get_gameweek_data()
+    # # Create/update gameweek table
+    # gameweeks_df = get_gameweek_data()
 
-    # Update my_team table
-    my_team_df = get_my_team_data()
+    # # Update my_team table
+    # my_team_df = get_my_team_data()
 
     # Write squads to excel
     squads_url = '/en/comps/9/Premier-League-Stats'
@@ -213,7 +213,7 @@ def bulk_update():
                         
                         player_gameweeks_df = pd.concat([player_gameweeks_df, player_gameweek_df], axis=0)
                         
-            time.sleep(3.5)
+                time.sleep(3.5)
 
     players_df = remove_duplicate_players(players_df)
 
@@ -363,25 +363,25 @@ def get_elevenify_data():
 
     team_strength_df = pd.read_csv(f'./elevenify/elev_{current_gw_id+1}.csv', sep=',', header=0)
     team_strength_df = trim_df(team_strength_column_map, team_strength_df)
-    strength_columns = team_strength_column_map.values()
-    for col in strength_columns:
-        team_strength_df[col] = team_strength_df.apply(lambda row: format_elevenify_data(row, col), axis=1)
+    # strength_columns = team_strength_column_map.values()
+    # for col in strength_columns:
+    #     team_strength_df[col] = team_strength_df.apply(lambda row: format_elevenify_data(row, col), axis=1)
 
     return team_strength_df
 
 
-def format_elevenify_data(row, col):
+# def format_elevenify_data(row, col):
 
-    """Returns corrected float values."""
+#     """Returns corrected float values."""
 
-    formatted_element = row[col]
+#     formatted_element = row[col]
 
-    if type(formatted_element) == str:
-        formatted_element = formatted_element.replace('+', '')
-        formatted_element = formatted_element.replace('-', '')
-        formatted_element = formatted_element.replace(' ', '')
+#     if type(formatted_element) == str:
+#         formatted_element = formatted_element.replace('+', '')
+#         formatted_element = formatted_element.replace('-', '')
+#         formatted_element = formatted_element.replace(' ', '')
 
-    return float(formatted_element)
+#     return float(formatted_element)
 
 
 def scrape_html(tag: str | element.Tag, table_id: str):
@@ -502,13 +502,13 @@ def post_gameweek_update():
 
     """Update db immediately after gameweek ends."""
 
-    squads_df, players_df, squad_gameweeks_df, player_gameweeks_df = bulk_update()
+    # squads_df, players_df, squad_gameweeks_df, player_gameweeks_df = bulk_update()
 
-    update_squad(squads_df)
-    update_player(players_df)
-    update_squad_gameweek(squad_gameweeks_df)
-    update_player_gameweek(player_gameweeks_df)
-    insert_player_gameweek()
+    # update_squad(squads_df)
+    # update_player(players_df)
+    # update_squad_gameweek(squad_gameweeks_df)
+    # update_player_gameweek(player_gameweeks_df)
+    # insert_player_gameweek()
     update_gameweek()
     update_my_team()
 
@@ -555,9 +555,9 @@ def update_squad_gameweek(squad_gameweeks_df: pd.DataFrame):
                 execute_from_file('update_current_squad_gameweek.sql', tuple(current_gw_args))
             elif row['gameweek_id'] == current_gw_id+1:
                 next_gw_args = [row['gameweek_id'],
-                                row['overall_strength'],
-                                row['attack_strength'],
-                                row['defence_strength'],
+                                float(row['overall_strength']),
+                                float(row['attack_strength']),
+                                float(row['defence_strength']),
                                 row['squad_id'],
                                 row['opposition_id'],
                                 row['venue']]
@@ -569,7 +569,7 @@ def update_team_strengths(gw_id: int, squad_id: int):
 
     """Update team strengths for given squad and gameweek."""
 
-    team_strengths_df = pd.read_csv(f'./elevenify/UVKbs_{gw_id}.csv', sep=',', header=0)
+    team_strengths_df = pd.read_csv(f'./elevenify/elev_{gw_id}.csv', sep=',', header=0)
     team_strengths_df = trim_df(team_strength_column_map, team_strengths_df)
     team_strengths_df.insert(0, 'squad_id', list(range(1, len(team_strengths_df.index)+1)))
     team_strength_df = team_strengths_df.loc[team_strengths_df['squad_id'] == squad_id]
@@ -665,9 +665,13 @@ def update_projected_points(gw_id: int):
 
             try:
                 args.append(player.get_expected_mins(gw_id)[0])
+            except TypeError as e:
+                args.append(None)
+
+            try:
                 args.append(player.get_projected_points(gw_id, [index]))
-            except:
-                args.extend([None, None])
+            except TypeError as e:
+                args.append(None)
 
             args.append(player_id)
             args.append(squad_gw_id)
@@ -721,10 +725,8 @@ def update_my_team():
 
 if __name__ == '__main__':
     #post_gameweek_update()
-    #update_projected_points(34)
+    update_projected_points(2)
     #update_my_team()
 
     # for squad_id in range(1, 21):
-    #     update_team_strengths(26, squad_id)
-
-    bulk_update()
+    #     update_team_strengths(2, squad_id)

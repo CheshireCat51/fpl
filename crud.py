@@ -57,20 +57,21 @@ def read_expected_mins(current_player_id: int, player_name: str, gw_id: int):
     prev_player_id = read_prev_player_id(player_name)
 
     current_condition = f'pgw.gameweek_id >= ({gw_id}-6)'
-    
-    current_results = execute_from_str(f'SELECT \
-                                            SUM(CASE WHEN {current_condition} THEN pgw.minutes_played * {last_6_weight} ELSE pgw.minutes_played * {older_weight} END)/SUM(CASE WHEN {current_condition} THEN {last_6_weight} ELSE {older_weight} END), \
-                                            STD(pgw.minutes_played) \
-                                        FROM player_gameweek pgw \
-                                        WHERE pgw.player_id = {current_player_id} AND pgw.started = 1 AND pgw.gameweek_id < {gw_id}', current_cnx).fetchall()[0]
+    query = f'SELECT \
+                SUM(CASE WHEN {current_condition} THEN pgw.minutes_played * {last_6_weight} ELSE pgw.minutes_played * {older_weight} END)/SUM(CASE WHEN {current_condition} THEN {last_6_weight} ELSE {older_weight} END), \
+                STD(pgw.minutes_played) \
+            FROM player_gameweek pgw \
+            WHERE pgw.player_id = {current_player_id} AND pgw.started = 1 AND pgw.gameweek_id < {gw_id}'
+    current_results = execute_from_str(query, current_cnx).fetchall()[0]
     
     if prev_player_id is not None:
         prev_condition = f'pgw.gameweek_id >= {gw_id+1}'
-        prev_results = execute_from_str(f'SELECT \
-                                            AVG(pgw.minutes_played), \
-                                            STD(pgw.minutes_played) \
-                                        FROM player_gameweek pgw \
-                                        WHERE pgw.player_id = {prev_player_id} AND pgw.started = 1 AND {prev_condition}', prev_cnx).fetchall()[0]
+        query = f'SELECT \
+                    AVG(pgw.minutes_played), \
+                    STD(pgw.minutes_played) \
+                FROM player_gameweek pgw \
+                WHERE pgw.player_id = {prev_player_id} AND pgw.started = 1 AND {prev_condition}'
+        prev_results = execute_from_str(query, prev_cnx).fetchall()[0]
         return (weighted_average(float(prev_results[0]), float(current_results[0])), weighted_average(float(prev_results[1]), float(current_results[1])))
     
     else:
@@ -84,22 +85,23 @@ def read_start_proportion(current_player_id: int, player_name: str, gw_id: int):
     prev_player_id = read_prev_player_id(player_name)
 
     current_condition = f'pgw.gameweek_id >= ({gw_id}-6)'
-    
-    current_results = execute_from_str(f'SELECT \
-                                            SUM(CASE WHEN {current_condition} THEN pgw.started * {last_6_weight} ELSE pgw.started * {older_weight} END)/SUM(CASE WHEN {current_condition} THEN {last_6_weight} ELSE {older_weight} END) \
-                                        FROM player_gameweek pgw \
-                                        WHERE pgw.player_id = {current_player_id} AND pgw.started IS NOT NULL AND pgw.gameweek_id < {gw_id}', current_cnx).fetchall()[0]
+    query = f'SELECT \
+                SUM(CASE WHEN {current_condition} THEN pgw.started * {last_6_weight} ELSE pgw.started * {older_weight} END)/SUM(CASE WHEN {current_condition} THEN {last_6_weight} ELSE {older_weight} END) \
+            FROM player_gameweek pgw \
+            WHERE pgw.player_id = {current_player_id} AND pgw.started IS NOT NULL AND pgw.gameweek_id < {gw_id}'
+    current_results = execute_from_str(query, current_cnx).fetchall()[0]
 
     if prev_player_id is not None:
         prev_condition = f'pgw.gameweek_id >= {gw_id+1}'
-        prev_results = execute_from_str(f'SELECT \
-                                            AVG(pgw.started) \
-                                        FROM player_gameweek pgw \
-                                        WHERE pgw.player_id = {prev_player_id} AND pgw.started IS NOT NULL AND {prev_condition}', prev_cnx).fetchall()[0]
-        return (weighted_average(float(prev_results[0]), float(current_results[0])), weighted_average(float(prev_results[1]), float(current_results[1])))
+        query = f'SELECT \
+                    AVG(pgw.started) \
+                FROM player_gameweek pgw \
+                WHERE pgw.player_id = {prev_player_id} AND pgw.started IS NOT NULL AND {prev_condition}'
+        prev_results = execute_from_str(query, prev_cnx).fetchall()[0]
+        return weighted_average(float(prev_results[0]), float(current_results[0]))
     
     else:
-        return (float(current_results[0]), float(current_results[1]))
+        return float(current_results[0])
 
 
 def read_attacking_stats_per_90(current_player_id: int, player_name: str):
@@ -108,18 +110,18 @@ def read_attacking_stats_per_90(current_player_id: int, player_name: str):
 
     prev_player_id = read_prev_player_id(player_name)
 
-    current_season = float(execute_from_str(f'SELECT p.npxG_per_90, p.xA_per_90 \
-                                                FROM player p \
-                                                WHERE p.id = {current_player_id}', current_cnx).fetchall()[0])
+    current_season = execute_from_str(f'SELECT p.npxG_per_90, p.xA_per_90 \
+                                        FROM player p \
+                                        WHERE p.id = {current_player_id}', current_cnx).fetchall()[0]
 
     if prev_player_id is not None:
-        prev_season = float(execute_from_str(f'SELECT p.npxG_per_90, p.xA_per_90 \
-                                                FROM player p \
-                                                WHERE p.id = {prev_player_id}', prev_cnx).fetchall()[0])
-        return weighted_average(prev_season, current_season)
+        prev_season = execute_from_str(f'SELECT p.npxG_per_90, p.xA_per_90 \
+                                        FROM player p \
+                                        WHERE p.id = {prev_player_id}', prev_cnx).fetchall()[0]
+        return weighted_average(prev_season[0], current_season[0]), weighted_average(prev_season[1], current_season[1])
     
     else:
-        return current_season
+        return (float(current_season[0]), float(current_season[1]))
 
 
 def read_penalty_stats_per_90(current_squad_id: int, squad_name: str):
@@ -174,10 +176,53 @@ def read_prev_player_id(player_name: str):
 
     """Get player id from previous season."""
 
+    if player_name == 'Gabriel Fernando de Jesus':
+        player_name = 'Gabriel Jesus'
+    elif player_name == 'Gabriel dos Santos Magalhães':
+        player_name = 'Gabriel Dos Santos'
+    elif player_name == 'Gabriel Martinelli Silva':
+        player_name = 'Gabriel Martinelli'
+    elif player_name == 'Ezri Konsa Ngoyo':
+        player_name = 'Ezri Konsa'
+    elif player_name == 'Emiliano Buendía Stati':
+        player_name = 'Emiliano Buendía'
+    elif player_name == 'Emiliano Martínez Romero':
+        player_name = 'Emiliano Martínez'
+    elif player_name == 'Miguel Almirón Rejala':
+        player_name = 'Miguel Almirón'
+    elif player_name == 'Matheus Santos Carneiro Da Cunha':
+        player_name = 'Matheus Cunha'
+    elif player_name == 'Rodrigo Muniz Carvalho':
+        player_name = 'Rodrigo Muniz'
+    elif player_name == 'Bruno Borges Fernandes':
+        player_name = 'Bruno Fernandes'
+    elif player_name == 'Pedro Lomba Neto':
+        player_name = 'Pedro Neto'
+    elif player_name == 'Rayan Aït-Nouri':
+        player_name = 'Rayan Aït Nouri'
+    elif player_name == 'Emerson Palmieri dos Santos':
+        player_name = 'Emerson Palmieri'
+    elif player_name == 'Richarlison de Andrade':
+        player_name = 'Richarlison'
+    elif player_name == 'Joelinton Cássio Apolinário de Lira':
+        player_name = 'Joelinton'
+    elif player_name == 'Jefferson Lerma Solís':
+        player_name = 'Jefferson Lerma'
+    elif player_name == 'Darwin Núñez Ribeiro':
+        player_name = 'Darwin Núñez'
+    elif player_name == 'Endo Wataru':
+        player_name = 'Wataru Endo'
+    elif player_name == 'Benjamin White':
+        player_name = 'Ben White'
+    elif player_name == 'David Raya Martin':
+        player_name = 'David Raya'
+
+    query = f'SELECT id FROM player WHERE name = "{player_name}"'
+
     try:
-        prev_id = int(execute_from_str(f'SELECT id FROM player WHERE name LIKE "{player_name}"', prev_cnx).fetchone()[0])
+        prev_id = int(execute_from_str(query, prev_cnx).fetchone()[0])
     except Exception as e:
-        print(e)
+        print(f'{player_name} was not in prem last season.')
         return None
     else:
         return prev_id
@@ -187,10 +232,29 @@ def read_prev_squad_id(squad_name: str):
 
     """Get squad id from previous season."""
 
+    if squad_name == 'Luton':
+        squad_name = 'Luton Town'
+    elif squad_name == 'Man City':
+        squad_name = 'Manchester City'
+    elif squad_name == 'Man Utd':
+        squad_name = 'Manchester Utd'
+    elif squad_name == 'Newcastle':
+        squad_name = 'Newcastle Utd'
+    elif squad_name == "Nott'm Forest":
+        squad_name = "Nott'ham Forest"
+    elif squad_name == 'Spurs':
+        squad_name = 'Tottenham'
+    elif squad_name == 'Ipswich':
+        squad_name = 'Ipswich Town'
+    elif squad_name == 'Leicester':
+        squad_name = 'Leicester City'
+
+    query = f'SELECT id FROM squad WHERE name = "{squad_name}"'
+
     try:
-        prev_id = int(execute_from_str(f'SELECT id FROM squad WHERE name LIKE "{squad_name}"', prev_cnx).fetchone()[0])
+        prev_id = int(execute_from_str(query, prev_cnx).fetchone()[0])
     except Exception as e:
-        print(e)
+        print(f'{squad_name} were not in prem last season.')
         return None
     else:
         return prev_id
@@ -200,8 +264,8 @@ def weighted_average(prev_val: float, current_val: float):
 
     """Weighted average between previous and current season."""
 
-    prev_weight = 0.3
-    current_weight = 0.7
+    prev_weight = 0.9
+    current_weight = 0.1
 
     weighted_average = (prev_weight*prev_val + current_weight*current_val)/(prev_weight+current_weight)
 

@@ -1,5 +1,6 @@
 import requests
 import os
+import pandas as pd
 from dotenv import load_dotenv
 import math
 from scipy.integrate import quad
@@ -76,12 +77,38 @@ def except_future_gw(gw_id: int):
         return next_gw_id
     else:
         return gw_id
+    
+
+def format_elevenify_data():
+
+    """Read and format elevenify data to csv."""
+
+    gw_id = Bootstrap.get_current_gw_id()
+    file_path = f'./elevenify/elev_{gw_id+1}.csv'
+
+    with open(file_path, 'r', encoding='utf-8') as team_strengths_file:
+        team_strengths = team_strengths_file.read().splitlines()
+
+    rows = []
+    for team in team_strengths[::2]:
+        row = team.split('\t')[1:]
+        if len(row) == 0:
+            continue
+        row.pop(1)  # Remove empty entries
+        rows.append(row)
+
+    df = pd.DataFrame(rows, columns=['Team', 'Attack', 'Defence', 'Overall'])
+    df.to_csv(file_path, index=False)
+
+
+if __name__ == '__main__':
+    format_elevenify_data()
 
 
 fpl_points_system = {
     'GKP': {
         'Clean Sheet': 4,
-        'Goal Scored': 6,
+        'Goal Scored': 10,
         '3 Saves': 1,
         'Penalty Save': 5,
         '2 Goals Conceded': -1,

@@ -146,11 +146,11 @@ class Player:
 
                     total_ev += mins_ev + (defensive_ev + attacking_ev + pen_ev + save_ev)*(mean_mins/90)
 
-                    print('Mins:', mins_ev)
-                    print('### Per 90 ###')
-                    print('Defence:', defensive_ev)
-                    print('Attack:', attacking_ev)
-                    print('Penalty:', pen_ev)
+                    # print('Mins:', mins_ev)
+                    # print('### Per 90 ###')
+                    # print('Defence:', defensive_ev)
+                    # print('Attack:', attacking_ev)
+                    # print('Penalty:', pen_ev)
         
         return total_ev
     
