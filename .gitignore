@@ -172,3 +172,6 @@ elevenify/
 
 # Json
 my_team_data.json
+
+# Helpers
+/helpers
