@@ -182,16 +182,20 @@ def read_prev_player_id(player_name: str):
         player_name = 'Gabriel Dos Santos'
     elif player_name == 'Gabriel Martinelli Silva':
         player_name = 'Gabriel Martinelli'
+    elif player_name == 'Diego Carlos Santos Silva':
+        player_name = 'Diego Carlos'
     elif player_name == 'Ezri Konsa Ngoyo':
         player_name = 'Ezri Konsa'
     elif player_name == 'Emiliano Buendía Stati':
-        player_name = 'Emiliano Buendía'
+        player_name = 'Emi Buendía'
     elif player_name == 'Emiliano Martínez Romero':
         player_name = 'Emiliano Martínez'
     elif player_name == 'Miguel Almirón Rejala':
         player_name = 'Miguel Almirón'
     elif player_name == 'Matheus Santos Carneiro Da Cunha':
         player_name = 'Matheus Cunha'
+    elif player_name == 'Norberto Murara Neto':
+        player_name = 'Norberto Neto'
     elif player_name == 'Rodrigo Muniz Carvalho':
         player_name = 'Rodrigo Muniz'
     elif player_name == 'Bruno Borges Fernandes':
@@ -216,7 +220,45 @@ def read_prev_player_id(player_name: str):
         player_name = 'Ben White'
     elif player_name == 'David Raya Martin':
         player_name = 'David Raya'
-
+    elif player_name == 'Dominic Solanke-Mitchell':
+        player_name = 'Dominic Solanke'
+    elif player_name == 'Mads Roerslev Rasmussen':
+        player_name = 'Mads Roerslev'
+    elif player_name == 'João Pedro Junqueira de Jesus':
+        player_name = 'João Pedro'
+    elif player_name == 'Mitoma Kaoru':
+        player_name = 'Kaoru Mitoma'
+    elif player_name == 'Moisés Caicedo Corozo':
+        player_name = 'Moisés Caicedo'
+    elif player_name == 'Marc Cucurella Saseta':
+        player_name = 'Marc Cucurella'
+    elif player_name == 'Alisson Ramses Becker':
+        player_name = 'Alisson'
+    elif player_name == 'Bernardo Veiga de Carvalho e Silva':
+        player_name = 'Bernardo Silva'
+    elif player_name == 'Jérémy Doku':
+        player_name = 'Jeremy Doku'
+    elif player_name == 'Ederson Santana de Moraes':
+        player_name = 'Ederson'
+    elif player_name == 'Matheus Luiz Nunes':
+        player_name = 'Matheus Nunes'
+    elif player_name == 'Stefan Ortega Moreno':
+        player_name = 'Stefan Ortega'
+    elif player_name == 'Rúben Gato Alves Dias':
+        player_name = 'Rúben Dias'
+    elif player_name == 'Antony Matheus dos Santos':
+        player_name = 'Antony'
+    elif player_name == 'Carlos Henrique Casimiro':
+        player_name = 'Casemiro'
+    elif player_name == 'Diogo Dalot Teixeira':
+        player_name = 'Diogo Dalot'
+    elif player_name == 'Bruno Guimarães Rodriguez Moura':
+        player_name = 'Bruno Guimarães'
+    elif player_name == 'José Malheiro de Sá':
+        player_name = 'José Sá'
+    elif player_name == 'Toti António Gomes':
+        player_name = 'Toti Gomes'
+        
     query = f'SELECT id FROM player WHERE name = "{player_name}"'
 
     try:
@@ -288,7 +330,7 @@ def execute_from_file(query_file_path: str, args: tuple):
             query = query_file.read()
 
         filled_query = query % args
-        print(filled_query)
+        # print(filled_query)
         cursor.execute(filled_query)
     
     write_conn.commit()
