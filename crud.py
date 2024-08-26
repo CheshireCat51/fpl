@@ -166,14 +166,22 @@ def read_squad_gameweek_id(squad_id: int, gameweek_id: int, opposition_id: int):
 
     """Returns player gameweek ids for given player on given gameweek."""
 
-    return int(execute_from_str(f'SELECT id FROM squad_gameweek WHERE squad_id = {squad_id} AND gameweek_id = {gameweek_id} AND opposition_id = {opposition_id}', current_cnx).fetchone()[0])
+    query = f'SELECT id FROM squad_gameweek WHERE squad_id = {squad_id} AND gameweek_id = {gameweek_id} AND opposition_id = {opposition_id}'
+    try:
+        squad_gameweek_id = int(execute_from_str(query, current_cnx).fetchone()[0])
+        return squad_gameweek_id
+    except TypeError:
+        return None
 
 
 def read_prev_player_id(player_name: str):
 
     """Get player id from previous season."""
 
-    player_name = player_map[player_map['API'] == player_name]['FBRef'].values[0]
+    try:
+        player_name = player_map[player_map['API'] == player_name]['FBRef'].values[0]
+    except IndexError:
+        return None
         
     query = f'SELECT id FROM player WHERE name = "{player_name}"'
 
@@ -207,7 +215,7 @@ def weighted_average(prev_val: float, current_val: float):
 
     """Weighted average between previous and current season."""
 
-    prev_weight = 0.9
+    prev_weight = 0.90
     current_weight = 0.1
 
     weighted_average = (prev_weight*prev_val + current_weight*current_val)/(prev_weight+current_weight)

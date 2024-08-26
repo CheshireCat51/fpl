@@ -170,8 +170,9 @@ solution.txt
 # Elevenify
 elevenify/
 
-# Json
-my_team_data.json
-
 # Helpers
 /helpers
+
+# Optim data
+fplreview.csv
+team.json

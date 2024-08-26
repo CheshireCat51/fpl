@@ -80,33 +80,36 @@ def main():
     # print(diaz.get_expected_mins(34))
     # print(diaz.get_projected_points(34))
 
-    data = []
+    # data = []
 
-    for player_id in crud.read_all_player_ids():
-        try:
-            fpl_player = Player(player_id)
-        except:
-            continue
-        print(fpl_player.player_id, fpl_player.second_name)
-        row = {
-            'Id': player_id,
-            'First name': fpl_player.first_name,
-            'Second name': fpl_player.second_name,
-            'Position': fpl_player.position
-        }
-        total_xp = 0
-        for gw_id in [1, 2, 3, 4, 5, 6]:
-            try:
-                xp = fpl_player.get_projected_points(gw_id)
-            except Exception as e:
-                xp = 0
-            total_xp += xp
-            row[f'{gw_id}xP'] = xp
-        row['TotalxP'] = total_xp
-        data.append(row)
+    # for player_id in crud.read_all_player_ids():
+    #     try:
+    #         fpl_player = Player(player_id)
+    #     except:
+    #         continue
+    #     print(fpl_player.player_id, fpl_player.second_name)
+    #     row = {
+    #         'Id': player_id,
+    #         'First name': fpl_player.first_name,
+    #         'Second name': fpl_player.second_name,
+    #         'Position': fpl_player.position
+    #     }
+    #     total_xp = 0
+    #     for gw_id in [2, 3, 4, 5, 6, 7]:
+    #         try:
+    #             xp = fpl_player.get_projected_points(gw_id)
+    #         except Exception as e:
+    #             xp = 0
+    #         total_xp += xp
+    #         row[f'{gw_id}xP'] = xp
+    #     row['TotalxP'] = total_xp
+    #     data.append(row)
 
-    post_wc_points = pd.DataFrame(columns=['Id', 'First name', 'Second name', 'Position', '1xP','2xP','3xP','4xP','5xP','6xP', 'TotalxP'], data=data)
-    post_wc_points.to_excel('first_six_pts.xlsx')
+    # post_wc_points = pd.DataFrame(columns=['Id', 'First name', 'Second name', 'Position', '2xP','3xP','4xP','5xP','6xP','7xP', 'TotalxP'], data=data)
+    # post_wc_points.to_excel('next_six_pts.xlsx')
+
+    opp = Manager(5530889)
+    print(opp.current_team.get_projected_points())
 
 # def solve_gk_problem(budget: float):
 

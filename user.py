@@ -10,7 +10,9 @@ class User(Manager):
 
     def __init__(self, manager_id: int):
         super().__init__(manager_id, is_user=True)
-        self.optim_data = self.generate_team_json(manager_id)
+
+        with open('team.json', 'r') as team_json_file:
+            self.optim_data = json.load(team_json_file)
 
 
     def generate_team_json(self, manager_id):

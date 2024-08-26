@@ -203,17 +203,17 @@ def bulk_update():
                         player_gameweek_df['squad_gameweek_id'] = player_gameweek_df.apply(lambda row: read_squad_gameweek_id(fpl_player.prem_team_id, row['gameweek_id'], row['opposition_id']), axis=1)
                         player_gameweek_df['started'] = player_gameweek_df.apply(format_started_col, axis=1)
                         # player_gameweek_df.insert(0, 'projected_points', 0)
-                        player_gameweek_df['projected_points'] = player_gameweek_df.apply(lambda row: fpl_player.get_projected_points(row['gameweek_id']), axis=1)
+                        # player_gameweek_df['projected_points'] = player_gameweek_df.apply(lambda row: fpl_player.get_projected_points(row['gameweek_id']), axis=1)
                         # player_gameweek_df.insert(0, 'xMins', 0)
-                        player_gameweek_df['xMins'] = player_gameweek_df.apply(lambda row: fpl_player.get_expected_mins(row['gameweek_id'])[0], axis=1)
+                        # player_gameweek_df['xMins'] = player_gameweek_df.apply(lambda row: fpl_player.get_expected_mins(row['gameweek_id'])[0], axis=1)
                         player_gameweek_df['points_scored'] = player_gameweek_df.apply(lambda row: fpl_player.get_points_scored(row['gameweek_id'], row['opposition_id']), axis=1)
                         player_gameweek_df = player_gameweek_df.drop('date', axis=1)
                         player_gameweek_df = player_gameweek_df.drop('name', axis=1)
-                        player_gameweek_df = player_gameweek_df.drop('opposition_id', axis=1)
+                        # player_gameweek_df = player_gameweek_df.drop('opposition_id', axis=1)
                         
                         player_gameweeks_df = pd.concat([player_gameweeks_df, player_gameweek_df], axis=0)
                         
-                time.sleep(3.5)
+                time.sleep(6.5)
 
     players_df = remove_duplicate_players(players_df)
 
@@ -222,7 +222,7 @@ def bulk_update():
     # squads_df.to_excel('squads.xlsx')
     # squad_gameweeks_df.to_excel('squad_gameweeks.xlsx')
     # players_df.to_excel('players.xlsx')
-    # player_gameweeks_df.to_excel('player_gameweeks.xlsx')
+    player_gameweeks_df.to_excel('player_gameweeks.xlsx')
 
     # gameweeks_df.to_sql('gameweek', con=current_cnx, if_exists='append', index=False)
     # my_team_df.to_sql('my_team', con=current_cnx, if_exists='append', index=False)
@@ -296,7 +296,7 @@ def get_player_id(row):
         return fpl_player.player_id
 
 
-def find_player(player_name) -> Player:
+def find_player(player_name) -> Player | None:
 
     """Find player in FPL API."""
 
@@ -368,20 +368,6 @@ def get_elevenify_data():
     #     team_strength_df[col] = team_strength_df.apply(lambda row: format_elevenify_data(row, col), axis=1)
 
     return team_strength_df
-
-
-# def format_elevenify_data(row, col):
-
-#     """Returns corrected float values."""
-
-#     formatted_element = row[col]
-
-#     if type(formatted_element) == str:
-#         formatted_element = formatted_element.replace('+', '')
-#         formatted_element = formatted_element.replace('-', '')
-#         formatted_element = formatted_element.replace(' ', '')
-
-#     return float(formatted_element)
 
 
 def scrape_html(tag: str | element.Tag, table_id: str):
@@ -509,7 +495,7 @@ def post_gameweek_update():
     # update_squad_gameweek(squad_gameweeks_df)
     # update_player_gameweek(player_gameweeks_df)
     # insert_player_gameweek()
-    update_gameweek()
+    # update_gameweek()
     update_my_team()
 
 
@@ -545,7 +531,6 @@ def update_squad_gameweek(squad_gameweeks_df: pd.DataFrame):
     # For each squad...
     for i in range(1, 21):
         trimmed_df = only_current_and_next_gw_df[only_current_and_next_gw_df['squad_id'] == i]
-        print(trimmed_df)
 
         # For each gameweek in current and next...
         for index, row in trimmed_df.iterrows():
@@ -605,10 +590,15 @@ def insert_player_gameweek():
 
             try:
                 args.append(player.get_expected_mins(current_gw_id+1)[0])
+            except Exception as e:
+                print(f'Missing player_gameweek data for player {player_id}.')
+                args.append(None)
+
+            try:
                 args.append(player.get_projected_points(current_gw_id+1, fixture_indices=[index]))
             except Exception as e:
                 print(f'Missing player_gameweek data for player {player_id}.')
-                args.extend([None, None])
+                args.append(None)
 
             args = format_null_args(args)
             execute_from_file('insert_player_gameweek.sql', tuple(args))
@@ -704,7 +694,7 @@ def update_my_team():
     
     """Update my team table."""
 
-    my_team_df = get_my_team_data(me)
+    my_team_df = get_my_team_data()
     i = 1
     for index, row in my_team_df.iterrows():
         args = [
@@ -724,8 +714,8 @@ def update_my_team():
 
 
 if __name__ == '__main__':
-    #post_gameweek_update()
-    update_projected_points(2)
+    post_gameweek_update()
+    #update_projected_points(2)
     #update_my_team()
 
     # for squad_id in range(1, 21):
