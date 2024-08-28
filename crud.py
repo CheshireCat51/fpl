@@ -68,7 +68,7 @@ def read_expected_mins(current_player_id: int, prev_player_id: int | None, gw_id
     current_results = execute_from_str(query, current_cnx).fetchall()[0]
     
     if prev_player_id is not None:
-        prev_condition = f'pgw.gameweek_id >= {gw_id+1}'
+        prev_condition = f'pgw.gameweek_id >= {gw_id+6}'
         query = f'SELECT \
                     AVG(pgw.minutes_played), \
                     STD(pgw.minutes_played) \
@@ -89,11 +89,11 @@ def read_start_proportion(current_player_id: int, prev_player_id: int | None, gw
     query = f'SELECT \
                 SUM(CASE WHEN {current_condition} THEN pgw.started * {last_6_weight} ELSE pgw.started * {older_weight} END)/SUM(CASE WHEN {current_condition} THEN {last_6_weight} ELSE {older_weight} END) \
             FROM player_gameweek pgw \
-            WHERE pgw.player_id = {current_player_id} AND pgw.started IS NOT NULL AND pgw.gameweek_id < {gw_id}'
+            WHERE pgw.player_id = {current_player_id} AND pgw.started IS NOT NULL'
     current_results = execute_from_str(query, current_cnx).fetchall()[0]
 
     if prev_player_id is not None:
-        prev_condition = f'pgw.gameweek_id >= {gw_id+1}'
+        prev_condition = f'pgw.gameweek_id >= {gw_id+6}'
         query = f'SELECT \
                     AVG(pgw.started) \
                 FROM player_gameweek pgw \
@@ -114,9 +114,9 @@ def read_attacking_stats_per_90(current_player_id: int, prev_player_id: int | No
                                         WHERE p.id = {current_player_id}', current_cnx).fetchall()[0]
 
     if prev_player_id is not None:
-        prev_season = execute_from_str(f'SELECT p.npxG_per_90, p.xA_per_90 \
-                                        FROM player p \
-                                        WHERE p.id = {prev_player_id}', prev_cnx).fetchall()[0]
+        prev_season = execute_from_str(f'SELECT (SUM(pgw.npxG)/SUM(pgw.minutes_played))*90, (SUM(pgw.xA)/SUM(pgw.minutes_played))*90 \
+                                        FROM player_gameweek pgw \
+                                        WHERE pgw.player_id = {prev_player_id}', prev_cnx).fetchall()[0]
         return weighted_average(prev_season[0], current_season[0]), weighted_average(prev_season[1], current_season[1])
     
     else:
@@ -216,7 +216,7 @@ def weighted_average(prev_val: float, current_val: float):
     """Weighted average between previous and current season."""
 
     prev_weight = 0.90
-    current_weight = 0.1
+    current_weight = 0.10
 
     weighted_average = (prev_weight*prev_val + current_weight*current_val)/(prev_weight+current_weight)
 

@@ -550,24 +550,25 @@ def update_squad_gameweek(squad_gameweeks_df: pd.DataFrame):
                 execute_from_file('update_next_squad_gameweek.sql', tuple(next_gw_args))
 
 
-def update_team_strengths(gw_id: int, squad_id: int):
+def update_team_strengths(gw_id: int):
 
     """Update team strengths for given squad and gameweek."""
 
-    team_strengths_df = pd.read_csv(f'./elevenify/elev_{gw_id}.csv', sep=',', header=0)
-    team_strengths_df = trim_df(team_strength_column_map, team_strengths_df)
-    team_strengths_df.insert(0, 'squad_id', list(range(1, len(team_strengths_df.index)+1)))
-    team_strength_df = team_strengths_df.loc[team_strengths_df['squad_id'] == squad_id]
-    team_strength_df = team_strength_df.reset_index()
-    args = [
-        team_strength_df['attack_strength'][0],
-        team_strength_df['defence_strength'][0],
-        team_strength_df['overall_strength'][0],
-        squad_id,
-        gw_id
-    ]
+    for squad_id in range(1, 21):
+        team_strengths_df = pd.read_csv(f'./elevenify/elev_{gw_id}.csv', sep=',', header=0)
+        team_strengths_df = trim_df(team_strength_column_map, team_strengths_df)
+        team_strengths_df.insert(0, 'squad_id', list(range(1, len(team_strengths_df.index)+1)))
+        team_strength_df = team_strengths_df.loc[team_strengths_df['squad_id'] == squad_id]
+        team_strength_df = team_strength_df.reset_index()
+        args = [
+            team_strength_df['attack_strength'][0],
+            team_strength_df['defence_strength'][0],
+            team_strength_df['overall_strength'][0],
+            squad_id,
+            gw_id
+        ]
 
-    execute_from_file('update_team_strengths.sql', tuple(format_null_args(args)))
+        execute_from_file('update_team_strengths.sql', tuple(format_null_args(args)))
 
 
 def insert_player_gameweek():
@@ -714,9 +715,7 @@ def update_my_team():
 
 
 if __name__ == '__main__':
-    post_gameweek_update()
-    #update_projected_points(2)
+    #post_gameweek_update()
+    update_projected_points(3)
     #update_my_team()
-
-    # for squad_id in range(1, 21):
-    #     update_team_strengths(2, squad_id)
+    #update_team_strengths(3)
