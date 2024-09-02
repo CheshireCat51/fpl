@@ -45,7 +45,7 @@ def read_attack_strength(squad_id: int, gw_id: int):
 
 def read_mean_strengths(gw_id: int):
 
-    """Returns goals conceded against average prem opponent for given squad."""
+    """Returns average team attack and defence strengths in order to adjust probability of goals for/against."""
 
     gw_id = except_future_gw(gw_id)
 
@@ -68,14 +68,14 @@ def read_expected_mins(current_player_id: int, prev_player_id: int | None, gw_id
     current_results = execute_from_str(query, current_cnx).fetchall()[0]
     
     if prev_player_id is not None:
-        prev_condition = f'pgw.gameweek_id >= {gw_id+6}'
+        prev_condition = f'pgw.gameweek_id >= {gw_id+1}'
         query = f'SELECT \
                     AVG(pgw.minutes_played), \
                     STD(pgw.minutes_played) \
                 FROM player_gameweek pgw \
                 WHERE pgw.player_id = {prev_player_id} AND pgw.started = 1 AND {prev_condition}'
         prev_results = execute_from_str(query, prev_cnx).fetchall()[0]
-        return (weighted_average(float(prev_results[0]), float(current_results[0])), weighted_average(float(prev_results[1]), float(current_results[1])))
+        return (weighted_average(float(prev_results[0]), float(current_results[0]), 'mins'), weighted_average(float(prev_results[1]), float(current_results[1]), 'mins'))
     
     else:
         return (float(current_results[0]), float(current_results[1]))
@@ -93,13 +93,13 @@ def read_start_proportion(current_player_id: int, prev_player_id: int | None, gw
     current_results = execute_from_str(query, current_cnx).fetchall()[0]
 
     if prev_player_id is not None:
-        prev_condition = f'pgw.gameweek_id >= {gw_id+6}'
+        prev_condition = f'pgw.gameweek_id >= {gw_id+1}'
         query = f'SELECT \
                     AVG(pgw.started) \
                 FROM player_gameweek pgw \
                 WHERE pgw.player_id = {prev_player_id} AND pgw.started IS NOT NULL AND {prev_condition}'
         prev_results = execute_from_str(query, prev_cnx).fetchall()[0]
-        return weighted_average(float(prev_results[0]), float(current_results[0]))
+        return weighted_average(float(prev_results[0]), float(current_results[0]), 'mins')
     
     else:
         return float(current_results[0])
@@ -117,7 +117,7 @@ def read_attacking_stats_per_90(current_player_id: int, prev_player_id: int | No
         prev_season = execute_from_str(f'SELECT (SUM(pgw.npxG)/SUM(pgw.minutes_played))*90, (SUM(pgw.xA)/SUM(pgw.minutes_played))*90 \
                                         FROM player_gameweek pgw \
                                         WHERE pgw.player_id = {prev_player_id}', prev_cnx).fetchall()[0]
-        return weighted_average(prev_season[0], current_season[0]), weighted_average(prev_season[1], current_season[1])
+        return weighted_average(prev_season[0], current_season[0], 'x'), weighted_average(prev_season[1], current_season[1], 'x')
     
     else:
         return (float(current_season[0]), float(current_season[1]))
@@ -138,7 +138,7 @@ def read_penalty_stats_per_90(current_squad_id: int, prev_squad_id: int | None):
                                                 JOIN player_gameweek pgw ON p.id = pgw.player_id \
                                                 WHERE p.squad_id = {prev_squad_id}', prev_cnx).fetchone()[0])
     
-        return weighted_average(prev_season, current_season)
+        return weighted_average(prev_season, current_season, 'x')
 
     else:
         return current_season
@@ -211,12 +211,16 @@ def read_prev_squad_id(squad_name: str):
         return prev_id
 
 
-def weighted_average(prev_val: float, current_val: float):
+def weighted_average(prev_val: float, current_val: float, weights: str):
 
     """Weighted average between previous and current season."""
 
-    prev_weight = 0.90
-    current_weight = 0.10
+    if weights == 'x':
+        prev_weight = 0.6
+        current_weight = 0.4
+    elif weights == 'mins':
+        prev_weight = 0.15
+        current_weight = 0.85
 
     weighted_average = (prev_weight*prev_val + current_weight*current_val)/(prev_weight+current_weight)
 

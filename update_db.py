@@ -222,7 +222,7 @@ def bulk_update():
     # squads_df.to_excel('squads.xlsx')
     # squad_gameweeks_df.to_excel('squad_gameweeks.xlsx')
     # players_df.to_excel('players.xlsx')
-    player_gameweeks_df.to_excel('player_gameweeks.xlsx')
+    # player_gameweeks_df.to_excel('player_gameweeks.xlsx')
 
     # gameweeks_df.to_sql('gameweek', con=current_cnx, if_exists='append', index=False)
     # my_team_df.to_sql('my_team', con=current_cnx, if_exists='append', index=False)
@@ -488,15 +488,15 @@ def post_gameweek_update():
 
     """Update db immediately after gameweek ends."""
 
-    # squads_df, players_df, squad_gameweeks_df, player_gameweeks_df = bulk_update()
+    squads_df, players_df, squad_gameweeks_df, player_gameweeks_df = bulk_update()
 
-    # update_squad(squads_df)
+    update_squad(squads_df)
     # update_player(players_df)
     # update_squad_gameweek(squad_gameweeks_df)
     # update_player_gameweek(player_gameweeks_df)
     # insert_player_gameweek()
     # update_gameweek()
-    update_my_team()
+    # update_my_team()
 
 
 def update_squad(squads_df: pd.DataFrame):
@@ -514,12 +514,45 @@ def update_player(players_df: pd.DataFrame):
     
     """Update player table."""
 
+    all_player_ids = read_all_player_ids()
+
     for index, row in players_df.iterrows():
-        args = [row[i] for i in player_column_map.values() if i != 'name']
-        args.pop(0)
-        args.append(row['id'])
-        args = format_null_args(args)
-        execute_from_file('update_player.sql', tuple(args))
+        if row['id'] in all_player_ids:
+            args = [row[i] for i in player_column_map.values() if i != 'name']
+            args.pop(0)
+            args.append(row['id'])
+            args = format_null_args(args)
+            execute_from_file('update_player.sql', tuple(args))
+        else:
+            args = [
+                row['id'],
+                row['name'],
+                row['squad_id'],
+                row['position'],
+                row['matches_played'],
+                row['minutes_played'],
+                row['goals'],
+                row['assists'],
+                row['penalty_goals'],
+                row['penalty_attempts'],
+                row['yellow_cards'],
+                row['red_cards'],
+                row['xG'],
+                row['npxG'],
+                row['xA'],
+                row['progressive_carries'],
+                row['progressive_passes'],
+                row['goals_per_90'],
+                row['assists_per_90'],
+                row['xG_per_90'],
+                row['npxG_per_90'],
+                row['xA_per_90'],
+            ]
+            try:
+                execute_from_file('insert_player.sql', tuple(args))
+            except Exception as e:
+                print(e)
+                print(args)
 
 
 def update_squad_gameweek(squad_gameweeks_df: pd.DataFrame):
@@ -586,19 +619,19 @@ def insert_player_gameweek():
                 squad_gameweek_id = read_squad_gameweek_id(player.prem_team_id, current_gw_id+1, fixture['id'])
                 args.append(squad_gameweek_id)
             except:
-                print(f'Missing squad_gameweek data for player {player_id}.')
+                print(f'Could not find squad gameweek id for player {player_id} in gw {current_gw_id+1}.')
                 args.append(None)
 
             try:
                 args.append(player.get_expected_mins(current_gw_id+1)[0])
             except Exception as e:
-                print(f'Missing player_gameweek data for player {player_id}.')
+                print(f'Could not calculate xMins for player {player_id}.')
                 args.append(None)
 
             try:
                 args.append(player.get_projected_points(current_gw_id+1, fixture_indices=[index]))
             except Exception as e:
-                print(f'Missing player_gameweek data for player {player_id}.')
+                print(f'Could not calculate projected points for player {player_id}.')
                 args.append(None)
 
             args = format_null_args(args)
@@ -716,6 +749,6 @@ def update_my_team():
 
 if __name__ == '__main__':
     #post_gameweek_update()
-    update_projected_points(3)
+    update_projected_points(4)
     #update_my_team()
     #update_team_strengths(3)

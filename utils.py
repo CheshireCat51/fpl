@@ -69,7 +69,7 @@ def format_null_args(args: list):
 
 def except_future_gw(gw_id: int):
 
-    """Return current gw_id if gw_id is in future. Used to fetch current team strength data."""
+    """Return next gw_id if specified gw_id is further in future than next gw. Used to fetch current team strength data."""
 
     next_gw_id = Bootstrap.get_current_gw_id()+1
 
@@ -87,7 +87,8 @@ def format_elevenify_data():
     file_path = f'./elevenify/elev_{gw_id+1}.csv'
 
     with open(file_path, 'r', encoding='utf-8') as team_strengths_file:
-        team_strengths = team_strengths_file.read().splitlines()
+        team_strengths = team_strengths_file.read()
+        team_strengths = team_strengths.replace('—', '-').splitlines()
 
     rows = []
     for team in team_strengths[::2]:
