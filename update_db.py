@@ -490,8 +490,8 @@ def post_gameweek_update():
 
     squads_df, players_df, squad_gameweeks_df, player_gameweeks_df = bulk_update()
 
-    update_squad(squads_df)
-    # update_player(players_df)
+    # update_squad(squads_df)
+    update_player(players_df)
     # update_squad_gameweek(squad_gameweeks_df)
     # update_player_gameweek(player_gameweeks_df)
     # insert_player_gameweek()
@@ -548,6 +548,7 @@ def update_player(players_df: pd.DataFrame):
                 row['npxG_per_90'],
                 row['xA_per_90'],
             ]
+            args = format_null_args(args)
             try:
                 execute_from_file('insert_player.sql', tuple(args))
             except Exception as e:
@@ -748,7 +749,8 @@ def update_my_team():
 
 
 if __name__ == '__main__':
-    #post_gameweek_update()
+    # post_gameweek_update()
+    # update_team_strengths(4)
     update_projected_points(4)
-    #update_my_team()
-    #update_team_strengths(3)
+    # update_my_team()
+    

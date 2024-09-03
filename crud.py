@@ -216,8 +216,8 @@ def weighted_average(prev_val: float, current_val: float, weights: str):
     """Weighted average between previous and current season."""
 
     if weights == 'x':
-        prev_weight = 0.6
-        current_weight = 0.4
+        prev_weight = 0.7
+        current_weight = 0.3
     elif weights == 'mins':
         prev_weight = 0.15
         current_weight = 0.85

@@ -1,3 +1,5 @@
 - Ensure that data are collected for correct fixtures in dgws
 - Reinsert player dgw data for gw 25 and 28
 - Keeper data
+- Modulise bulk update
+- xStats in wrong order
