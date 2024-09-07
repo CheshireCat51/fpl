@@ -108,8 +108,8 @@ def main():
     # post_wc_points = pd.DataFrame(columns=['Id', 'First name', 'Second name', 'Position', '2xP','3xP','4xP','5xP','6xP','7xP', 'TotalxP'], data=data)
     # post_wc_points.to_excel('next_six_pts.xlsx')
 
-    opp = Manager(5530889)
-    print(opp.current_team.get_projected_points())
+    me = Manager(os.environ.get('ME'))
+    print(me.current_team.get_projected_points())
 
 # def solve_gk_problem(budget: float):
 

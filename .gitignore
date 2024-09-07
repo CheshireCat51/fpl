@@ -174,5 +174,5 @@ elevenify/
 /helpers
 
 # Optim data
-fplreview.csv
 team.json
+/optim_data

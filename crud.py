@@ -75,7 +75,7 @@ def read_expected_mins(current_player_id: int, prev_player_id: int | None, gw_id
                 FROM player_gameweek pgw \
                 WHERE pgw.player_id = {prev_player_id} AND pgw.started = 1 AND {prev_condition}'
         prev_results = execute_from_str(query, prev_cnx).fetchall()[0]
-        return (weighted_average(float(prev_results[0]), float(current_results[0]), 'mins'), weighted_average(float(prev_results[1]), float(current_results[1]), 'mins'))
+        return (weighted_average(float(prev_results[0]), float(current_results[0]), 'mins'), weighted_average(float(prev_results[1]), float(current_results[1]), 'x'))
     
     else:
         return (float(current_results[0]), float(current_results[1]))
@@ -107,36 +107,57 @@ def read_start_proportion(current_player_id: int, prev_player_id: int | None, gw
 
 def read_attacking_stats_per_90(current_player_id: int, prev_player_id: int | None):
 
-    """Returns attacking stats per 90."""
+    """Returns attacking stats per 90. Uses 38-match sample as FPLReview suggests 40 matches is optimal but difficult to integrate here.
+    https://fplreview.com/how-accurately-does-xg-data-indicate-player-goalscoring-potential/."""
 
     current_season = execute_from_str(f'SELECT p.npxG_per_90, p.xA_per_90 \
                                         FROM player p \
                                         WHERE p.id = {current_player_id}', current_cnx).fetchall()[0]
 
     if prev_player_id is not None:
+        prev_condition = f'pgw.gameweek_id >= {Bootstrap.get_current_gw_id()+1}'
         prev_season = execute_from_str(f'SELECT (SUM(pgw.npxG)/SUM(pgw.minutes_played))*90, (SUM(pgw.xA)/SUM(pgw.minutes_played))*90 \
                                         FROM player_gameweek pgw \
-                                        WHERE pgw.player_id = {prev_player_id}', prev_cnx).fetchall()[0]
+                                        WHERE pgw.player_id = {prev_player_id} AND {prev_condition}', prev_cnx).fetchall()[0]
         return weighted_average(prev_season[0], current_season[0], 'x'), weighted_average(prev_season[1], current_season[1], 'x')
     
     else:
         return (float(current_season[0]), float(current_season[1]))
 
 
-def read_penalty_stats_per_90(current_squad_id: int, prev_squad_id: int | None):
+# def read_penalty_stats_per_90(current_squad_id: int, prev_squad_id: int | None):
+
+#     """Returns penalty attempts per 90 for given squad."""
+
+#     current_season = float(execute_from_str(f'SELECT AVG(pgw.penalty_attempts) \
+#                                                 FROM player p \
+#                                                 JOIN player_gameweek pgw ON p.id = pgw.player_id \
+#                                                 WHERE p.squad_id = {current_squad_id}', current_cnx).fetchone()[0])
+
+#     if prev_squad_id is not None:
+#         prev_season = float(execute_from_str(f'SELECT AVG(pgw.penalty_attempts) \
+#                                                 FROM player p \
+#                                                 JOIN player_gameweek pgw ON p.id = pgw.player_id \
+#                                                 WHERE p.squad_id = {prev_squad_id}', prev_cnx).fetchone()[0])
+    
+#         return weighted_average(prev_season, current_season, 'x')
+
+#     else:
+#         return current_season
+
+
+def read_squad_pen_attempts_per_90(current_squad_id: int, prev_squad_id: int | None):
 
     """Returns penalty attempts per 90 for given squad."""
 
-    current_season = float(execute_from_str(f'SELECT AVG(pgw.penalty_attempts) \
-                                                FROM player p \
-                                                JOIN player_gameweek pgw ON p.id = pgw.player_id \
-                                                WHERE p.squad_id = {current_squad_id}', current_cnx).fetchone()[0])
+    current_season = float(execute_from_str(f'SELECT (s.penalty_attempts/s.matches_played) \
+                                                FROM squad s \
+                                                WHERE s.id = {current_squad_id}', current_cnx).fetchone()[0])
 
     if prev_squad_id is not None:
-        prev_season = float(execute_from_str(f'SELECT AVG(pgw.penalty_attempts) \
-                                                FROM player p \
-                                                JOIN player_gameweek pgw ON p.id = pgw.player_id \
-                                                WHERE p.squad_id = {prev_squad_id}', prev_cnx).fetchone()[0])
+        prev_season = float(execute_from_str(f'SELECT (s.penalty_attempts/s.matches_played) \
+                                                FROM squad s \
+                                                WHERE s.id = {prev_squad_id}', prev_cnx).fetchone()[0])
     
         return weighted_average(prev_season, current_season, 'x')
 
@@ -213,14 +234,16 @@ def read_prev_squad_id(squad_name: str):
 
 def weighted_average(prev_val: float, current_val: float, weights: str):
 
-    """Weighted average between previous and current season."""
+    """Weighted average between previous and current season. See weight progression graphs in ./weight_prog."""
+
+    next_gw_id = Bootstrap.get_current_gw_id() + 1
 
     if weights == 'x':
-        prev_weight = 0.7
-        current_weight = 0.3
+        prev_weight = -(10/38)*next_gw_id + 10
+        current_weight = (80/57)*next_gw_id
     elif weights == 'mins':
-        prev_weight = 0.15
-        current_weight = 0.85
+        prev_weight = (38/next_gw_id) - 1
+        current_weight = 38 - (38/next_gw_id)
 
     weighted_average = (prev_weight*prev_val + current_weight*current_val)/(prev_weight+current_weight)
 

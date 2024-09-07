@@ -2,4 +2,6 @@
 - Reinsert player dgw data for gw 25 and 28
 - Keeper data
 - Modulise bulk update
-- xStats in wrong order
+- Spread market odds
+- RMSE and R^2 errors in gameweek table
+- ML
