@@ -184,7 +184,7 @@ class Player:
             Need to adjust for finishing skill."""
 
         attacking_ev = 0
-        npxG_per_90, xA_per_90 = crud.read_attacking_stats_per_90(self.player_id, self.prev_player_id)
+        npxG_per_90, xA_per_90 = crud.read_attacking_stats_per_90(self.player_id, self.prev_player_id, gw_id)
         opponent_defence_strength = crud.read_defence_strength(opponent_id, gw_id)
 
         # Adjust for defensive strength of opposition
@@ -236,25 +236,6 @@ class Player:
         
         pen_ev = 0
         pen_xG = 0.76
-
-        # if self.penalty_rank is not None:
-        #     mean_pens_per_90 = crud.read_penalty_stats_per_90(self.prem_team_id, self.prev_prem_team_id)
-        #     prob_no_superior_pen_takers_on_pitch = 1
-        #     if self.penalty_rank != 1:
-        #         for pen_taker in [i for i in Bootstrap.all_players if i['team'] == self.prem_team_id and i['penalties_order'] != None]:
-        #             # If the current pen taker is higher in the pecking order than self...
-        #             if self.penalty_rank > pen_taker['penalties_order']:
-        #                 try:
-        #                     pen_taker_player = Player(pen_taker['id'])
-        #                     prob_no_superior_pen_takers_on_pitch *= (1-(pen_taker_player.get_expected_mins(gw_id)[0]/90))
-        #                 except:
-        #                     print(f'Missing penalty data for player {pen_taker_player.player_id}: {pen_taker_player.first_name + ' ' + pen_taker_player.second_name}')
-
-        #     for i in range(1, 6):
-        #         prob_attempt_i_pens = poisson_distribution(i, mean_pens_per_90)
-        #         pen_ev += prob_attempt_i_pens*i
-
-        #     pen_ev *= prob_no_superior_pen_takers_on_pitch*pen_xG*fpl_points_system[self.position]['Goal Scored']
 
         if self.penalty_rank is not None:
             squad_pen_attempts_per_90 = crud.read_squad_pen_attempts_per_90(self.prem_team_id, self.prev_prem_team_id)

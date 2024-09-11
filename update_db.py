@@ -490,13 +490,13 @@ def post_gameweek_update():
 
     squads_df, players_df, squad_gameweeks_df, player_gameweeks_df = bulk_update()
 
-    # update_squad(squads_df)
+    update_squad(squads_df)
     update_player(players_df)
-    # update_squad_gameweek(squad_gameweeks_df)
-    # update_player_gameweek(player_gameweeks_df)
-    # insert_player_gameweek()
-    # update_gameweek()
-    # update_my_team()
+    update_squad_gameweek(squad_gameweeks_df)
+    update_player_gameweek(player_gameweeks_df)
+    insert_player_gameweek()
+    update_gameweek()
+    update_my_team()
 
 
 def update_squad(squads_df: pd.DataFrame):
@@ -749,8 +749,8 @@ def update_my_team():
 
 
 if __name__ == '__main__':
-    # post_gameweek_update()
+    post_gameweek_update()
     # update_team_strengths(4)
-    update_projected_points(4)
+    # update_projected_points(4)
     # update_my_team()
     
