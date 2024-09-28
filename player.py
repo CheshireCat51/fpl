@@ -185,18 +185,19 @@ class Player:
 
         attacking_ev = 0
         npxG_per_90, xA_per_90 = crud.read_attacking_stats_per_90(self.player_id, self.prev_player_id, gw_id)
+        # npxG_share, xA_share = crud.read_attacking_stats_share(self.player_id, self.prev_player_id)
+        # attack_strength = crud.read_attack_strength(self.prem_team_id, gw_id)
         opponent_defence_strength = crud.read_defence_strength(opponent_id, gw_id)
 
-        # Adjust for defensive strength of opposition
-        adjustment = ((opponent_defence_strength-mean_defence_strength)/mean_defence_strength)+1
+        adjustment = ((opponent_defence_strength-mean_defence_strength)/mean_defence_strength)+1  # Adjust for defensive strength of opposition
+        # npxG_shared = npxG_share*attack_strength*adjustment
+        # xA_shared = xA_share*attack_strength*adjustment
         adjusted_npxG = npxG_per_90*adjustment
         adjusted_xA = xA_per_90*adjustment
-
-        # # Where i represents goals scored...
-        # for i in range(0, 11):
-        #     prob_score_i_goals = poisson_distribution(i, adjusted_npxG)
-        #     prob_assist_i_goals = poisson_distribution(i, adjusted_xA)
-        #     attacking_ev += i*(prob_score_i_goals*fpl_points_system[self.position]['Goal Scored'] + prob_assist_i_goals*fpl_points_system['Other']['Assist'])
+        # print('Share method npxG: ', npxG_shared)
+        # print('npxG method: ', adjusted_npxG)
+        # print('Share method xA: ', xA_shared)
+        # print('xA method: ', adjusted_xA)
 
         attacking_ev = adjusted_npxG*fpl_points_system[self.position]['Goal Scored'] + adjusted_xA*fpl_points_system['Other']['Assist']
 
@@ -220,11 +221,8 @@ class Player:
             if i == 0:
                 defensive_ev += prob_concede_i_goals*fpl_points_system[self.position]['Clean Sheet']
             else:
-                try:
+                if self.position in ['GKP', 'DEF']:
                     defensive_ev += prob_concede_i_goals*fpl_points_system[self.position]['2 Goals Conceded']*(math.floor(i/2))
-                except KeyError:
-                    # print('Midfielder. No penalty for 2 or more goals conceded.')
-                    pass
 
         return defensive_ev
     

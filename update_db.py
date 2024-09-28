@@ -750,7 +750,6 @@ def update_my_team():
 
 if __name__ == '__main__':
     post_gameweek_update()
-    # update_team_strengths(4)
-    # update_projected_points(4)
-    # update_my_team()
+    # update_team_strengths(6)
+    # update_projected_points(6)
     

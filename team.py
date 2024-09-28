@@ -1,5 +1,6 @@
 from player import Player
 from bootstrap import Bootstrap
+import json
 
 
 class Team:
@@ -7,8 +8,17 @@ class Team:
 
     def __init__(self, manager_id: int, gw_id: int = Bootstrap.get_current_gw_id(), is_user: bool = False):
 
-        team_summary = Bootstrap.session.get(f'https://fantasy.premierleague.com/api/entry/{manager_id}/event/{gw_id}/picks/').json()
-        transfers_key = 'entry_history'
+        if is_user:
+            try:
+                with open('team.json', 'r') as f:
+                    team_summary = json.load(f)
+                transfers_key = 'transfers'
+            except:
+                team_summary = Bootstrap.session.get(f'https://fantasy.premierleague.com/api/entry/{manager_id}/event/{gw_id}/picks/').json()
+                transfers_key = 'entry_history'
+        else:
+            team_summary = Bootstrap.session.get(f'https://fantasy.premierleague.com/api/entry/{manager_id}/event/{gw_id}/picks/').json()
+            transfers_key = 'entry_history'
 
         self.is_user = is_user
         self.team_summary = team_summary

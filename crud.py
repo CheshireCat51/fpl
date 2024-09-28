@@ -130,6 +130,26 @@ def read_attacking_stats_per_90(current_player_id: int, prev_player_id: int | No
     
     else:
         return float(current_season[0]), float(current_season[1])
+    
+
+def read_attacking_stats_share(current_player_id: int, prev_player_id: int | None):
+
+    """Read player's share of squad's attacking data in order to adjust correctly."""
+
+    current_season = execute_from_str(f'SELECT (p.npxG/s.npxG), (p.xA/s.xA) \
+                                        FROM player p \
+                                        JOIN squad s ON p.squad_id = s.id \
+                                        WHERE p.id = {current_player_id}', current_cnx).fetchall()[0]
+
+    if prev_player_id is not None:
+        prev_season = execute_from_str(f'SELECT (p.npxG/s.npxG), (p.xA/s.xA) \
+                                        FROM player p \
+                                        JOIN squad s ON p.squad_id = s.id \
+                                        WHERE p.id = {prev_player_id}', prev_cnx).fetchall()[0]
+        return weighted_average(prev_season[0], current_season[0], 'x'), weighted_average(prev_season[1], current_season[1], 'x')
+    
+    else:
+        return float(current_season[0]), float(current_season[1])
 
 
 def read_squad_pen_attempts_per_90(current_squad_id: int, prev_squad_id: int | None):
