@@ -88,7 +88,7 @@ def format_elevenify_data():
 
     with open(file_path, 'r', encoding='utf-8') as team_strengths_file:
         team_strengths = team_strengths_file.read()
-        team_strengths = team_strengths.replace('—', '-').splitlines()
+        team_strengths = team_strengths.replace('−', '-').splitlines()
 
     rows = []
     for team in team_strengths[::2]:

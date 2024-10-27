@@ -7,7 +7,7 @@ from manager import Manager
 from user import User
 from dotenv import load_dotenv
 import os
-from utils import format_deadline_str, format_null_args
+from utils import format_deadline_str, format_null_args, format_elevenify_data
 from player import Player
 from crud import prev_cnx, current_cnx, execute_from_file, read_all_player_ids, read_squad_gameweek_id
 import time
@@ -361,8 +361,17 @@ def get_elevenify_data():
 
     """Returns dataframe of team strengths from Elevenify."""
 
-    team_strength_df = pd.read_csv(f'./elevenify/elev_{current_gw_id+1}.csv', sep=',', header=0)
-    team_strength_df = trim_df(team_strength_column_map, team_strength_df)
+    def build_df():
+        team_strength_df = pd.read_csv(f'./elevenify/elev_{current_gw_id+1}.csv', sep=',', header=0)
+        team_strength_df = trim_df(team_strength_column_map, team_strength_df)
+        return team_strength_df
+
+    try:
+        team_strength_df = build_df()
+    except KeyError:
+        format_elevenify_data()
+        team_strength_df = build_df()
+
     # strength_columns = team_strength_column_map.values()
     # for col in strength_columns:
     #     team_strength_df[col] = team_strength_df.apply(lambda row: format_elevenify_data(row, col), axis=1)
@@ -749,7 +758,7 @@ def update_my_team():
 
 
 if __name__ == '__main__':
-    post_gameweek_update()
+    # post_gameweek_update()
     # update_team_strengths(6)
-    # update_projected_points(6)
+    update_projected_points(9)
     

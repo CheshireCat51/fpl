@@ -1,2 +1,2 @@
 INSERT INTO player
-VALUES (%, %, %, %, %, %, %, %, %, %, %, %, %, %, %, %, %, %, %, %, %, %, %, %, %)
+VALUES (%s, "%s", %s, "%s", %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
