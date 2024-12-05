@@ -5,4 +5,4 @@
 - Spread market odds
 - RMSE and R^2 errors in gameweek table
 - ML
-- Fix issue with player insert
+- Adjust xMins for injured players in gameweeks after they return

@@ -252,6 +252,10 @@ def weighted_average(prev_val: float, current_val: float, weights: str):
         prev_weight = (38/next_gw_id) - 1
         current_weight = 38 - (38/next_gw_id)
 
+    if prev_val is None:
+        prev_val = 0
+        prev_weight = 0
+
     weighted_average = (prev_weight*prev_val + current_weight*current_val)/(prev_weight+current_weight)
 
     return weighted_average
