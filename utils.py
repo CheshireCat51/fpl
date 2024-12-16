@@ -6,33 +6,7 @@ import math
 from scipy.integrate import quad
 import pandas as pd
 from bootstrap import Bootstrap
-
-
-def init_session():
-
-    """Initialize a session to get login cookies."""
-
-    load_dotenv()
-
-    url = 'https://users.premierleague.com/accounts/login/'
-
-    payload = {
-        'password': os.environ.get('FPL_PWD'),
-        'login': 'georgejpowell51@gmail.com',
-        'redirect_uri': 'https://fantasy.premierleague.com/a/login',
-        'app': 'plfpl-web'
-    }
-
-    session = requests.session()
-    session.post(url, data=payload)
-
-    # headers = {
-    #     'cookie': os.environ.get('COOKIE')
-    # }
-    
-    # session.headers.update(headers)
-
-    return session
+import subprocess
 
 
 def poisson_distribution(k: int, lam: float):
@@ -102,8 +76,47 @@ def format_elevenify_data():
     df.to_csv(file_path, index=False)
 
 
-if __name__ == '__main__':
-    format_elevenify_data()
+def backup_db(database, output_file):
+
+    """
+    Dump a MySQL database to a file.
+    
+    Args:
+        host (str): The hostname or IP address of the MySQL server.
+        user (str): The MySQL username.
+        password (str): The MySQL password.
+        database (str): The name of the database to dump.
+        output_file (str): The file path to save the dump.
+
+    Returns:
+        bool: True if dump succeeded, False otherwise.
+    """
+    
+    try:
+        # Build the mysqldump command
+        command = [
+            "mysqldump",
+            "-h", "localhost",
+            "-u", "app",
+            f'-p"{os.environ.get('DB_PASS')}"',  # Note: No space between `-p` and the password
+            database
+        ]
+
+        print(' '.join(command))
+
+        # Open the output file in write mode
+        with open(output_file, "w") as file:
+            # Execute the command and direct output to the file
+            subprocess.run(command, stdout=file, stderr=subprocess.PIPE, check=True)
+
+        print(f"Database dumped successfully to {output_file}")
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"Error dumping database: {e.stderr.decode('utf-8')}")
+        return False
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return False
 
 
 fpl_points_system = {

@@ -2,17 +2,17 @@ from matplotlib import pyplot as plt
 import pandas as pd
 from player import Player
 import mplcursors
-from matplotlib.colors import LinearSegmentedColormap
 import numpy as np
 from user import User
+from manager import Manager
 from dotenv import load_dotenv
 import os
+from crud import execute_from_str, current_cnx
+from bootstrap import Bootstrap
 
 
 # Load environment vars
 load_dotenv()
-# Create client user object
-me = User(os.environ.get('ME'))
 
 
 def xp_vs_eo(gw_id: int):
@@ -33,37 +33,40 @@ def xp_vs_eo(gw_id: int):
 
     # xp = xp[xp['EO'] > 0].reset_index()
 
-    my_team = [i['element'] for i in me.optim_data['picks']]
+    # Create client user object
+    me = User(os.environ.get('ME'))
+    my_team = [i['element'] for i in me.current_team.team_summary['picks']]
     my_team_xp = xp[xp['ID'].isin(my_team)]
-    # xp = xp[~xp['ID'].isin(my_team)]
-
-    # Define the red-to-green colormap
-    red_blue_cmap = LinearSegmentedColormap.from_list("RedBlue", ["blue", "red"], 100)
+    # not_my_team_xp = xp[~xp['ID'].isin(my_team)]
 
     max_eo = xp['EO'].max()
     max_pts = xp['Total_Pts'].max()
     threat_grad = (xp['Total_Pts']*xp['EO']/100)#/(max_pts*max_eo)
     gain_grad = (xp['Total_Pts']*(1-xp['EO']/100))#/(max_pts*max_eo)
 
-    gain = 0
+    my_team_gain = 0
     for index in xp.index:
         player_id = xp.at[index, 'ID']
         if player_id in my_team_xp['ID'].to_list():
-            gain += gain_grad[index]
+            my_team_gain += gain_grad[index]
         elif player_id in xp['ID'].to_list():
-            gain -= threat_grad[index]
-    print('Expected gain on field over next 8 GWs:', gain)
+            my_team_gain -= threat_grad[index]
 
-    plt.scatter(xp['Total_Pts'], xp['EO'], c=threat_grad, cmap=red_blue_cmap)
+    plt.scatter(xp['Total_Pts'], xp['EO'], c=threat_grad, cmap='turbo')
     plt.colorbar(label='Threat (Pts)')
+    
     # Add tooltips using mplcursors
     cursor = mplcursors.cursor(hover=True)
 
-    plt.scatter(my_team_xp['Total_Pts'], my_team_xp['EO'], c='yellow', label='My Team', edgecolors='green')  # Highlight specific points with a different color
-    # plt.plot(xp['Total_Pts'], xp['Total_Pts'], label='Threat contours')
+    plt.scatter(my_team_xp['Total_Pts'], my_team_xp['EO'], c='white', label='My Team', edgecolors='black')  # Highlight specific points with a different color
+    plt.text(x=0, y=max_eo, s=f'Expected 8 GW gain: {round(my_team_gain, 2)} Pts', fontdict={'size':18})
+    # arrow_properties = dict(facecolor='black', arrowstyle='->', lw=1)
+    # plt.annotate("", xy=(max_pts-3, max_eo), xytext=(0, max_eo), arrowprops=arrow_properties)
+    # plt.text(max_pts/2, max_eo+1, 'Decision Quality', fontsize=12, ha='center', va='center', rotation=0)
+    # plt.annotate("", xy=(max_pts, 0), xytext=(max_pts, max_eo-3), arrowprops=arrow_properties)
+    # plt.text(max_pts+1, max_eo/2, 'Risk', fontsize=12, ha='center', va='center', rotation=270)
     plt.xlabel('Total xPts over next 8 GWs')
     plt.ylabel('Ownership (%)')
-    # plt.legend()
 
     # Customize the tooltip to display the label for each point
     @cursor.connect("add")
@@ -75,8 +78,28 @@ def xp_vs_eo(gw_id: int):
         elif player_id in xp['ID'].to_list():
             sel.annotation.set_text(f"{xp.at[index, 'Name']}\nThreat: {round(threat_grad[index], 2)}")
 
+    plt.grid(visible=True)
+    plt.show()
+
+
+def xp_vs_pts():
+
+    """Graphing expected against realised points over the season."""
+
+    current_gw_id = Bootstrap.get_current_gw_id()
+
+    query = 'SELECT my_projected_points, my_points_scored FROM gameweek'
+    results = execute_from_str(query, current_cnx).fetchall()
+    projected = [i[0] for i in results]
+    realised = [i[1] for i in results]
+    gw_range = range(1,current_gw_id+1)
+
+    plt.plot(gw_range, [sum(projected[1:i]) for i in gw_range], label='Projected')
+    plt.plot(gw_range, [sum(realised[1:i]) for i in gw_range], label='Realised')
+    plt.legend()
     plt.show()
 
 
 if __name__ == '__main__':
-    xp_vs_eo(14)
+    xp_vs_eo(16)
+    #xp_vs_pts()

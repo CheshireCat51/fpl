@@ -8,13 +8,13 @@ import pandas as pd
 
 
 load_dotenv()
-engine = create_engine(f'mysql://app:{os.environ.get('DB_PASS')}@localhost/fpl_model_23/24')
-prev_cnx = engine.connect()
+prev_engine = create_engine(f'mysql://app:{os.environ.get('DB_PASS')}@localhost/fpl_model_2324')
+prev_cnx = prev_engine.connect()
 
-engine = create_engine(f'mysql://app:{os.environ.get('DB_PASS')}@localhost/fpl_model_24/25')
-current_cnx = engine.connect()
+current_engine = create_engine(f'mysql://app:{os.environ.get('DB_PASS')}@localhost/fpl_model_2425')
+current_cnx = current_engine.connect()
 
-write_conn = mysql.connector.connect(host='localhost', user='app', password=os.environ.get('DB_PASS'), database='fpl_model_24/25')
+write_conn = mysql.connector.connect(host='localhost', user='app', password=os.environ.get('DB_PASS'), database='fpl_model_2425')
 
 # Weights
 last_6_weight = 0.7
@@ -246,8 +246,8 @@ def weighted_average(prev_val: float, current_val: float, weights: str):
     next_gw_id = current_gw_id + 1
 
     if weights == 'x':
-        prev_weight = -(10/38)*current_gw_id + 10
-        current_weight = (80/57)*current_gw_id
+        prev_weight = -(5/32)*(next_gw_id - 38)
+        current_weight = next_gw_id - 1
     elif weights == 'mins':
         prev_weight = (38/next_gw_id) - 1
         current_weight = 38 - (38/next_gw_id)

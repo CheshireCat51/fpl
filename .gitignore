@@ -176,3 +176,6 @@ elevenify/
 # Optim data
 team.json
 /optim_data
+
+# DB
+/db_backup

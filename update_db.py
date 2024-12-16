@@ -7,7 +7,7 @@ from manager import Manager
 from user import User
 from dotenv import load_dotenv
 import os
-from utils import format_deadline_str, format_null_args, format_elevenify_data
+from utils import format_deadline_str, format_null_args, format_elevenify_data, backup_db
 from player import Player
 from crud import prev_cnx, current_cnx, execute_from_file, read_all_player_ids, read_squad_gameweek_id
 import time
@@ -459,7 +459,7 @@ def get_my_team_data():
 
     players = me.current_team.get_players()
     bench = [i['element'] for i in me.current_team.team_summary['picks'] if i['multiplier'] == 0]
-    prices = me.optim_data['picks']
+    prices = me.current_team.team_summary['picks']
     data = []
     for player in players:
         is_captain = False
@@ -496,6 +496,12 @@ def get_my_team_data():
 def post_gameweek_update():
 
     """Update db immediately after gameweek ends."""
+
+    success = backup_db('fpl_model_2425', './db_backup/fpl_model_2425.sql')
+    if success:
+        print('Successfully dumped DB.')
+    else:
+        print('Failed to dump DB.')
 
     squads_df, players_df, squad_gameweeks_df, player_gameweeks_df = bulk_update()
 
@@ -758,7 +764,7 @@ def update_my_team():
 
 
 if __name__ == '__main__':
-    # post_gameweek_update()
+    post_gameweek_update()
     # update_team_strengths(6)
-    update_projected_points(14)
+    # update_projected_points(16)
     
