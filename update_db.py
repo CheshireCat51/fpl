@@ -50,7 +50,9 @@ squad_gw_column_map = {
     'Opponent': 'name',
     'Venue': 'venue',
     'xG': 'xG',
-    'xGA': 'xGC'
+    'xGA': 'xGC',
+    'GF': 'goals_scored',
+    'GA': 'goals_conceded'
 }
 
 team_strength_column_map = {
@@ -584,7 +586,7 @@ def update_squad_gameweek(squad_gameweeks_df: pd.DataFrame):
         # For each gameweek in current and next...
         for index, row in trimmed_df.iterrows():
             if row['gameweek_id'] == current_gw_id:
-                current_gw_args = [row['gameweek_id'], row['xG'], row['xGC'], row['squad_id'], row['opposition_id'], row['venue']]
+                current_gw_args = [row['gameweek_id'], row['xG'], row['xGC'], row['goals_scored'], row['goals_conceded'], row['squad_id'], row['opposition_id'], row['venue']]
                 current_gw_args = format_null_args(current_gw_args)
                 execute_from_file('update_current_squad_gameweek.sql', tuple(current_gw_args))
             elif row['gameweek_id'] == current_gw_id+1:
@@ -766,5 +768,5 @@ def update_my_team():
 if __name__ == '__main__':
     post_gameweek_update()
     # update_team_strengths(6)
-    # update_projected_points(16)
+    # update_projected_points(20)
     

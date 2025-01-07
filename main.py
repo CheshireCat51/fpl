@@ -11,6 +11,23 @@ def main():
 
     """Entrypoint for FPL tracker."""
 
+    # rogers = Player(54)
+    # print(rogers.get_expected_mins(20))
+
+    # print('Vardy')
+    # rogers = Player(306)
+    # print(rogers.get_projected_points(20))
+
+    print('Wood')
+    rogers = Player(447)
+    print(rogers.get_projected_points(15))
+
+    # print('JP')
+    # rogers = Player(129)
+    # print(rogers.get_projected_points(20))
+
+    # print(crud.read_pen_attempts_per_90())
+
     # for player_id in [3]:
     #     try:
     #         fpl_player = Player(player_id)
@@ -32,13 +49,13 @@ def main():
             # print('xMins:', xmins)
             # print('\n')
 
-    me = Manager(os.environ.get('ME'))
-    gabriel = Player(3)
-    for league in me.get_leagues():
-        if league.league_name not in ['Brentford', 'Overall', 'Gameweek 1', 'England', 'Second Chance', 'Sky Sports League']:
-            print(league.league_name)
-            print(league.get_player_ownership(gabriel, int(os.environ.get('ME'))))
-            print('\n')
+    # me = Manager(os.environ.get('ME'))
+    # gabriel = Player(3)
+    # for league in me.get_leagues():
+    #     if league.league_name not in ['Brentford', 'Overall', 'Gameweek 1', 'England', 'Second Chance', 'Sky Sports League']:
+    #         print(league.league_name)
+    #         print(league.get_player_ownership(gabriel, int(os.environ.get('ME'))))
+    #         print('\n')
     # print(me.current_team.get_projected_points())
 
 

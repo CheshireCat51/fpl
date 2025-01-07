@@ -4,4 +4,5 @@
 - Modulise bulk update
 - Spread market odds
 - RMSE and R^2 errors in gameweek table
-- ML
+- ML (train on real goals, assists, mins etc. and then predict based on expected stats)
+- Add gw 18 data for BRE, ARS, BRI and IPS

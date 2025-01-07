@@ -1,7 +1,5 @@
-import requests
 import os
 import pandas as pd
-from dotenv import load_dotenv
 import math
 from scipy.integrate import quad
 import pandas as pd
@@ -101,8 +99,7 @@ def backup_db(database, output_file):
             f'-p"{os.environ.get('DB_PASS')}"',  # Note: No space between `-p` and the password
             database
         ]
-
-        print(' '.join(command))
+        command = ' '.join(command)
 
         # Open the output file in write mode
         with open(output_file, "w") as file:
@@ -117,6 +114,10 @@ def backup_db(database, output_file):
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
         return False
+
+
+# if __name__ == '__main__':
+#     backup_db('fpl_model_2425', './db_backup/fpl_model_2425.sql')
 
 
 fpl_points_system = {

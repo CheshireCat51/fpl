@@ -35,14 +35,15 @@ def xp_vs_eo(gw_id: int):
 
     # Create client user object
     me = User(os.environ.get('ME'))
+    # me = Manager(7103935)
     my_team = [i['element'] for i in me.current_team.team_summary['picks']]
     my_team_xp = xp[xp['ID'].isin(my_team)]
     # not_my_team_xp = xp[~xp['ID'].isin(my_team)]
 
     max_eo = xp['EO'].max()
     max_pts = xp['Total_Pts'].max()
-    threat_grad = (xp['Total_Pts']*xp['EO']/100)#/(max_pts*max_eo)
-    gain_grad = (xp['Total_Pts']*(1-xp['EO']/100))#/(max_pts*max_eo)
+    threat_grad = (xp['Total_Pts']*xp['EO']/100)
+    gain_grad = (xp['Total_Pts']*(1-xp['EO']/100))
 
     my_team_gain = 0
     for index in xp.index:
@@ -86,7 +87,7 @@ def xp_vs_pts():
 
     """Graphing expected against realised points over the season."""
 
-    current_gw_id = Bootstrap.get_current_gw_id()
+    current_gw_id = Bootstrap.get_current_gw_id()-1
 
     query = 'SELECT my_projected_points, my_points_scored FROM gameweek'
     results = execute_from_str(query, current_cnx).fetchall()
@@ -101,5 +102,5 @@ def xp_vs_pts():
 
 
 if __name__ == '__main__':
-    xp_vs_eo(16)
-    #xp_vs_pts()
+    xp_vs_eo(20)
+    # xp_vs_pts()

@@ -17,8 +17,8 @@ current_cnx = current_engine.connect()
 write_conn = mysql.connector.connect(host='localhost', user='app', password=os.environ.get('DB_PASS'), database='fpl_model_2425')
 
 # Weights
-last_6_weight = 0.7
-older_weight = 0.3
+last_6_weight = 0.55
+older_weight = 0.44
 
 # Load maps
 player_map = pd.read_csv('player_map.csv')
@@ -159,7 +159,7 @@ def read_squad_pen_attempts_per_90(current_squad_id: int, prev_squad_id: int | N
     current_season = float(execute_from_str(f'SELECT (s.penalty_attempts/s.matches_played) \
                                                 FROM squad s \
                                                 WHERE s.id = {current_squad_id}', current_cnx).fetchone()[0])
-
+    
     if prev_squad_id is not None:
         prev_season = float(execute_from_str(f'SELECT (s.penalty_attempts/s.matches_played) \
                                                 FROM squad s \
@@ -169,6 +169,16 @@ def read_squad_pen_attempts_per_90(current_squad_id: int, prev_squad_id: int | N
 
     else:
         return current_season
+    
+
+def read_pen_attempts_per_90():
+
+    """Returns mean penalty attempts per 90 across all squads."""
+
+    current_season = float(execute_from_str(f'SELECT AVG(s.penalty_attempts/s.matches_played) FROM squad s', current_cnx).fetchone()[0])
+    prev_season = float(execute_from_str(f'SELECT AVG(s.penalty_attempts/s.matches_played) FROM squad s', prev_cnx).fetchone()[0])
+    
+    return weighted_average(prev_season, current_season, 'x')
 
 
 def read_all_player_ids():
