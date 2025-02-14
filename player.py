@@ -79,12 +79,14 @@ class Player:
             if fixture['team_a'] == self.prem_team_id: # if player's team are away team...
                 opponent = {
                     'id': fixture['team_h'],
-                    'name': Bootstrap.get_prem_team_by_id(fixture['team_h'])['name']
+                    'name': Bootstrap.get_prem_team_by_id(fixture['team_h'])['name'],
+                    'venue': 'Away'
                 }
             else: # else if player's team are home team...
                 opponent = {
                     'id': fixture['team_a'],
-                    'name': Bootstrap.get_prem_team_by_id(fixture['team_a'])['name']
+                    'name': Bootstrap.get_prem_team_by_id(fixture['team_a'])['name'],
+                    'venue': 'Home'
                 }
             opponents.append(opponent)
         
@@ -190,15 +192,17 @@ class Player:
 
         attacking_ev = 0
         npxG_per_90, xA_per_90 = crud.read_attacking_stats_per_90(self.player_id, self.prev_player_id, gw_id)
-        # npxG_share, xA_share = crud.read_attacking_stats_share(self.player_id, self.prev_player_id)
-        # attack_strength = crud.read_attack_strength(self.prem_team_id, gw_id)
+
         opponent_defence_strength = crud.read_defence_strength(opponent_id, gw_id)
 
         adjustment = ((opponent_defence_strength-mean_defence_strength)/mean_defence_strength)+1  # Adjust for defensive strength of opposition
-        # npxG_shared = npxG_share*attack_strength*adjustment
-        # xA_shared = xA_share*attack_strength*adjustment
         adjusted_npxG = npxG_per_90*adjustment
         adjusted_xA = xA_per_90*adjustment
+
+        # npxG_share, xA_share = crud.read_attacking_stats_share(self.player_id, self.prev_player_id)
+        # attack_strength = crud.read_attack_strength(self.prem_team_id, gw_id)
+        # npxG_shared = npxG_share*attack_strength*adjustment
+        # xA_shared = xA_share*attack_strength*adjustment
         # print('Share method npxG: ', npxG_shared)
         # print('npxG method: ', adjusted_npxG)
         # print('Share method xA: ', xA_shared)
@@ -207,6 +211,28 @@ class Player:
         attacking_ev = adjusted_npxG*fpl_points_system[self.position]['Goal Scored'] + adjusted_xA*fpl_points_system['Other']['Assist']
 
         return attacking_ev
+    
+
+    def get_likelihood_of_x_or_more_goals(self, num_goals: int, mean_defence_strength: float, opponent_id: int, gw_id: int) -> float:
+
+        """Returns likelihood of scoring x or more goals. Assumes goals follow Poisson distribution."""
+
+        npxG_per_90, xA_per_90 = crud.read_attacking_stats_per_90(self.player_id, self.prev_player_id, gw_id)
+
+        opponent_defence_strength = crud.read_defence_strength(opponent_id, gw_id)
+
+        adjustment = ((opponent_defence_strength-mean_defence_strength)/mean_defence_strength)+1  # Adjust for defensive strength of opposition
+        adjusted_npxG = npxG_per_90*adjustment
+        adjusted_xA = xA_per_90*adjustment
+
+        prob_score = 0
+        prob_assist = 0
+
+        for i in range(num_goals, 8):
+            prob_score += poisson_distribution(i, adjusted_npxG)
+            prob_assist += poisson_distribution(i, adjusted_xA)
+
+        return prob_score, prob_assist
     
 
     def get_defensive_returns_per_90(self, mean_attack_strength: float, opponent_id: int, gw_id: int) -> float:

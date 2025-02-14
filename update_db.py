@@ -202,7 +202,7 @@ def bulk_update():
                         player_gameweek_df['gameweek_id'] = player_gameweek_df.apply(lambda row: get_gameweek_id(row, player_gameweek_df), axis=1)
                         player_gameweek_df['opposition_id'] = player_gameweek_df.apply(get_squad_id, axis=1)
                         player_gameweek_df = player_gameweek_df.loc[player_gameweek_df['minutes_played'] != 'On matchday squad, but did not play']  # Remove rows where player was an unused substitute
-                        player_gameweek_df['squad_gameweek_id'] = player_gameweek_df.apply(lambda row: read_squad_gameweek_id(fpl_player.prem_team_id, row['gameweek_id'], row['opposition_id']), axis=1)
+                        player_gameweek_df['squad_gameweek_id'] = player_gameweek_df.apply(lambda row: read_squad_gameweek_id(fpl_player.prem_team_id, row['gameweek_id'], row['opposition_id'], squad_gameweek_df[squad_gameweek_df['gameweek_id'] == row['gameweek_id']]['venue'].item()), axis=1)
                         player_gameweek_df['started'] = player_gameweek_df.apply(format_started_col, axis=1)
                         # player_gameweek_df.insert(0, 'projected_points', 0)
                         # player_gameweek_df['projected_points'] = player_gameweek_df.apply(lambda row: fpl_player.get_projected_points(row['gameweek_id']), axis=1)
@@ -511,9 +511,9 @@ def post_gameweek_update():
     update_player(players_df)
     update_squad_gameweek(squad_gameweeks_df)
     update_player_gameweek(player_gameweeks_df)
-    insert_player_gameweek()
-    update_gameweek()
-    update_my_team()
+    # insert_player_gameweek()
+    # update_gameweek()
+    # update_my_team()
 
 
 def update_squad(squads_df: pd.DataFrame):
@@ -634,7 +634,7 @@ def insert_player_gameweek():
             args = [int(player_id), int(current_gw_id+1)]
 
             try:
-                squad_gameweek_id = read_squad_gameweek_id(player.prem_team_id, current_gw_id+1, fixture['id'])
+                squad_gameweek_id = read_squad_gameweek_id(player.prem_team_id, current_gw_id+1, fixture['id'], fixture['venue'])
                 args.append(squad_gameweek_id)
             except:
                 print(f'Could not find squad gameweek id for player {player_id} in gw {current_gw_id+1}.')
@@ -665,7 +665,8 @@ def update_player_gameweek(player_gameweeks_df: pd.DataFrame):
     for index, row in trimmed_df.iterrows():
         player = Player(row['player_id'])
         # for index, fixture in enumerate(player.get_fixture(current_gw_id)):
-        squad_gw_id = read_squad_gameweek_id(player.prem_team_id, current_gw_id, row['opposition_id'])
+        # squad_gw_id = read_squad_gameweek_id(player.prem_team_id, current_gw_id, row['opposition_id'])
+        squad_gw_id = row['squad_gameweek_id']
         args = [row['started'],
                 row['minutes_played'],
                 row['goals'],
@@ -690,7 +691,7 @@ def update_player_gameweek(player_gameweeks_df: pd.DataFrame):
         execute_from_file('update_player_gameweek.sql', tuple(args))
 
     # Delete duplicate entries (often caused by players on loan from one squad to another e.g. Cole Palmer in 23/24)
-    #execute_from_file('delete_duplicates_player_gameweek.sql', tuple())
+    # execute_from_file('delete_duplicates_player_gameweek.sql', tuple())
 
 
 def update_projected_points(gw_id: int):
@@ -702,7 +703,7 @@ def update_projected_points(gw_id: int):
     for player_id in all_player_ids:
         player = Player(player_id)
         for index, fixture in enumerate(player.get_fixture(gw_id)):
-            squad_gw_id = read_squad_gameweek_id(player.prem_team_id, gw_id, fixture['id'])
+            squad_gw_id = read_squad_gameweek_id(player.prem_team_id, gw_id, fixture['id'], fixture['venue'])
             args = []
 
             try:
@@ -715,12 +716,13 @@ def update_projected_points(gw_id: int):
             except TypeError as e:
                 args.append(None)
 
+            args.append(gw_id)
             args.append(player_id)
             args.append(squad_gw_id)
             args = format_null_args(args)
             execute_from_file('update_projected_points.sql', tuple(args))
 
-    execute_from_file('update_next_gameweek.sql', (me.current_team.get_projected_points(gw_id), gw_id))
+    # execute_from_file('update_next_gameweek.sql', (me.current_team.get_projected_points(gw_id), gw_id))
 
 
 def update_gameweek():
@@ -768,5 +770,5 @@ def update_my_team():
 if __name__ == '__main__':
     post_gameweek_update()
     # update_team_strengths(6)
-    # update_projected_points(20)
+    # update_projected_points(25)
     

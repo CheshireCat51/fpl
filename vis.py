@@ -102,5 +102,5 @@ def xp_vs_pts():
 
 
 if __name__ == '__main__':
-    xp_vs_eo(20)
+    xp_vs_eo(24)
     # xp_vs_pts()

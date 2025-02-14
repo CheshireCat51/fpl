@@ -16,9 +16,15 @@ current_cnx = current_engine.connect()
 
 write_conn = mysql.connector.connect(host='localhost', user='app', password=os.environ.get('DB_PASS'), database='fpl_model_2425')
 
-# Weights
-last_6_weight = 0.55
-older_weight = 0.44
+# Weights (a 50-50 weighting assumes there is no such thing as "form")
+last_6_weight = 0.50
+older_weight = 0.50
+
+# Minutes are weighted towards the last 6 as short-term minutes variance tends to be low
+# E.g. if Saka gets injured, Nwaneri is likely to play more minutes until Saka recovers despite Nwaneri having low minutes historically. 
+# We therefore need to quickly boost Nwaneri's xMins by weighting his recent minutes more highly.
+last_6_mins_weight = 0.7
+older_mins_weight = 0.3
 
 # Load maps
 player_map = pd.read_csv('player_map.csv')
@@ -63,7 +69,7 @@ def read_expected_mins(current_player_id: int, prev_player_id: int | None, gw_id
 
     current_condition = f'pgw.gameweek_id >= ({gw_id}-6)'
     query = f'SELECT \
-                SUM(CASE WHEN {current_condition} THEN pgw.minutes_played * {last_6_weight} ELSE pgw.minutes_played * {older_weight} END)/SUM(CASE WHEN {current_condition} THEN {last_6_weight} ELSE {older_weight} END), \
+                SUM(CASE WHEN {current_condition} THEN pgw.minutes_played * {last_6_mins_weight} ELSE pgw.minutes_played * {older_mins_weight} END)/SUM(CASE WHEN {current_condition} THEN {last_6_mins_weight} ELSE {older_mins_weight} END), \
                 STD(pgw.minutes_played) \
             FROM player_gameweek pgw \
             WHERE pgw.player_id = {current_player_id} AND pgw.started = 1 AND pgw.gameweek_id < {gw_id}'
@@ -90,7 +96,7 @@ def read_start_proportion(current_player_id: int, prev_player_id: int | None, gw
 
     current_condition = f'pgw.gameweek_id >= ({gw_id}-6)'
     query = f'SELECT \
-                SUM(CASE WHEN {current_condition} THEN pgw.started * {last_6_weight} ELSE pgw.started * {older_weight} END)/SUM(CASE WHEN {current_condition} THEN {last_6_weight} ELSE {older_weight} END) \
+                SUM(CASE WHEN {current_condition} THEN pgw.started * {last_6_mins_weight} ELSE pgw.started * {older_mins_weight} END)/SUM(CASE WHEN {current_condition} THEN {last_6_mins_weight} ELSE {older_mins_weight} END) \
             FROM player_gameweek pgw \
             WHERE pgw.player_id = {current_player_id} AND pgw.started IS NOT NULL'
     current_results = execute_from_str(query, current_cnx).fetchall()[0]
@@ -199,11 +205,11 @@ def read_all_player_ids():
 #     return [i[0] for i in results]
 
 
-def read_squad_gameweek_id(squad_id: int, gameweek_id: int, opposition_id: int):
+def read_squad_gameweek_id(squad_id: int, gameweek_id: int, opposition_id: int, venue: str):
 
     """Returns player gameweek ids for given player on given gameweek."""
 
-    query = f'SELECT id FROM squad_gameweek WHERE squad_id = {squad_id} AND gameweek_id = {gameweek_id} AND opposition_id = {opposition_id}'
+    query = f'SELECT id FROM squad_gameweek WHERE squad_id = {squad_id} AND gameweek_id = {gameweek_id} AND opposition_id = {opposition_id} AND venue = "{venue}"'
     try:
         squad_gameweek_id = int(execute_from_str(query, current_cnx).fetchone()[0])
         return squad_gameweek_id

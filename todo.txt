@@ -1,8 +1,8 @@
 - Ensure that data are collected for correct fixtures in dgws
-- Reinsert player dgw data for gw 25 and 28
+- Reinsert player dgw data for gw 25 and 28 (23/24 season)
 - Keeper data
 - Modulise bulk update
 - Spread market odds
 - RMSE and R^2 errors in gameweek table
 - ML (train on real goals, assists, mins etc. and then predict based on expected stats)
-- Add gw 18 data for BRE, ARS, BRI and IPS
+- Integrate expected player return date into xMins calculation

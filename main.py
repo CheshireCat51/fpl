@@ -11,22 +11,21 @@ def main():
 
     """Entrypoint for FPL tracker."""
 
-    # rogers = Player(54)
-    # print(rogers.get_expected_mins(20))
+    # print('Isak')
+    # rogers = Player(401)
+    # print(rogers.get_projected_points(21))
 
-    # print('Vardy')
-    # rogers = Player(306)
-    # print(rogers.get_projected_points(20))
+    # print('Wood')
+    # rogers = Player(447)
+    # print(rogers.get_projected_points(21))
 
-    print('Wood')
-    rogers = Player(447)
-    print(rogers.get_projected_points(15))
+    # print('Evanilson')
+    # rogers = Player(617)
+    # print(rogers.get_projected_points(21))
 
     # print('JP')
     # rogers = Player(129)
-    # print(rogers.get_projected_points(20))
-
-    # print(crud.read_pen_attempts_per_90())
+    # print(rogers.get_projected_points(21))
 
     # for player_id in [3]:
     #     try:
