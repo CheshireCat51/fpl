@@ -51,12 +51,11 @@ def except_future_gw(gw_id: int):
         return gw_id
     
 
-def format_elevenify_data():
+def format_elevenify_data(gw_id: int):
 
     """Read and format elevenify data to csv."""
 
-    gw_id = Bootstrap.get_current_gw_id()
-    file_path = f'./elevenify/elev_{gw_id+1}.csv'
+    file_path = f'./elevenify/elev_{gw_id}.csv'
 
     with open(file_path, 'r', encoding='utf-8') as team_strengths_file:
         team_strengths = team_strengths_file.read()

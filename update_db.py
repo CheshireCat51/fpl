@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 import os
 from utils import format_deadline_str, format_null_args, format_elevenify_data, backup_db
 from player import Player
-from crud import prev_cnx, current_cnx, execute_from_file, read_all_player_ids, read_squad_gameweek_id
+from crud import execute_from_file, read_all_player_ids, read_squad_gameweek_id, current_engine
 import time
 from datetime import datetime
 
@@ -139,7 +139,7 @@ def bulk_update():
         squad_gameweek_df = trim_df(squad_gw_column_map, squad_gameweek_df)
         squad_gameweek_df.insert(0, 'squad_id', squad_id)
         squad_gameweek_df['opposition_id'] = squad_gameweek_df.apply(get_squad_id, axis=1)
-        squad_gameweek_df['gameweek_id'] = squad_gameweek_df.apply(lambda row: get_gameweek_id(row, squad_gameweek_df), axis=1)
+        squad_gameweek_df = get_gameweek_ids(squad_gameweek_df)
         squad_gameweek_df = squad_gameweek_df.drop('name', axis=1)
         squad_gameweek_df = squad_gameweek_df.drop('date', axis=1)
 
@@ -181,7 +181,6 @@ def bulk_update():
 
             print(player.text)
 
-            # Write player's last 5 games to excel
             try:
                 fpl_player = Player(player_df.loc[player_df['name'] == player.text, 'id'].item())
             except:
@@ -199,10 +198,10 @@ def bulk_update():
                     if player_gameweek_df.empty == False and squad_id == fpl_player.prem_team_id:
                         player_gameweek_df = trim_df(player_gw_column_map, player_gameweek_df)
                         player_gameweek_df.insert(0, 'player_id', fpl_player.player_id)
-                        player_gameweek_df['gameweek_id'] = player_gameweek_df.apply(lambda row: get_gameweek_id(row, player_gameweek_df), axis=1)
+                        player_gameweek_df = get_gameweek_ids(player_gameweek_df)
                         player_gameweek_df['opposition_id'] = player_gameweek_df.apply(get_squad_id, axis=1)
                         player_gameweek_df = player_gameweek_df.loc[player_gameweek_df['minutes_played'] != 'On matchday squad, but did not play']  # Remove rows where player was an unused substitute
-                        player_gameweek_df['squad_gameweek_id'] = player_gameweek_df.apply(lambda row: read_squad_gameweek_id(fpl_player.prem_team_id, row['gameweek_id'], row['opposition_id'], squad_gameweek_df[squad_gameweek_df['gameweek_id'] == row['gameweek_id']]['venue'].item()), axis=1)
+                        player_gameweek_df['squad_gameweek_id'] = player_gameweek_df.apply(lambda row: get_squad_gameweek_id(row, fpl_player, squad_gameweek_df), axis=1)
                         player_gameweek_df['started'] = player_gameweek_df.apply(format_started_col, axis=1)
                         # player_gameweek_df.insert(0, 'projected_points', 0)
                         # player_gameweek_df['projected_points'] = player_gameweek_df.apply(lambda row: fpl_player.get_projected_points(row['gameweek_id']), axis=1)
@@ -226,6 +225,7 @@ def bulk_update():
     # players_df.to_excel('players.xlsx')
     # player_gameweeks_df.to_excel('player_gameweeks.xlsx')
 
+    # current_cnx = current_engine.connect()
     # gameweeks_df.to_sql('gameweek', con=current_cnx, if_exists='append', index=False)
     # my_team_df.to_sql('my_team', con=current_cnx, if_exists='append', index=False)
     # squads_df.to_sql('squad', con=current_cnx, if_exists='append', index=False)
@@ -266,26 +266,29 @@ def get_squad_id(row):
 
     """Returns squad id from FPL API for given row."""
 
-    if row['name'] == 'Luton Town':
-        name = 'Luton'
-    elif row['name'] == 'Manchester City':
-        name = 'Man City'
-    elif row['name'] == 'Manchester Utd':
-        name = 'Man Utd'
-    elif row['name'] == 'Newcastle Utd':
-        name = 'Newcastle'
-    elif row['name'] == "Nott'ham Forest":
-        name = "Nott'm Forest"
-    elif row['name'] == 'Tottenham':
-        name = 'Spurs'
-    elif row['name'] == 'Ipswich Town':
-        name = 'Ipswich'
-    elif row['name'] == 'Leicester City':
-        name = 'Leicester'
-    else:
-        name = row['name']
+    # if row['name'] == 'Luton Town':
+    #     name = 'Luton'
+    # elif row['name'] == 'Manchester City':
+    #     name = 'Man City'
+    # elif row['name'] == 'Manchester Utd':
+    #     name = 'Man Utd'
+    # elif row['name'] == 'Newcastle Utd':
+    #     name = 'Newcastle'
+    # elif row['name'] == "Nott'ham Forest":
+    #     name = "Nott'm Forest"
+    # elif row['name'] == 'Tottenham':
+    #     name = 'Spurs'
+    # elif row['name'] == 'Ipswich Town':
+    #     name = 'Ipswich'
+    # elif row['name'] == 'Leicester City':
+    #     name = 'Leicester'
+    # else:
+    #     name = row['name']
 
-    return Bootstrap.get_prem_team_by_name(name)['id']
+    squad_map = pd.read_csv('./squad_map.csv', header=0)
+    api_name = squad_map[squad_map['FBRef'] == row['name']]['API'].values[0]
+
+    return Bootstrap.get_prem_team_by_name(api_name)['id']
 
 
 def get_player_id(row):
@@ -310,36 +313,43 @@ def find_player(player_name) -> Player | None:
         return Player(player['id'])
 
 
-def get_gameweek_id(row, df):
+def get_gameweek_ids(df: pd.DataFrame):
 
     """Returns gameweek id from FBRef table. WIP identifying B/DGW."""
 
-    # Reset index so that all rows are numbered consecutively
+    df['gameweek_id'] = df.apply(lambda row: int(row['gameweek_id'].split(' ')[1]), axis=1)  # Separate gw_id from string
+    df = df.sort_values(by='date', ascending=True)  # Sort games by asc date
     df = df.reset_index()
 
-    round = int(row['gameweek_id'].split(' ')[1])
-    date = row['date']
+    for index, row in df.iterrows():
+        round = row['gameweek_id']
+        if 37 >= index >= 1:
+            try:
+                preceeding_round = df.iloc[index-1]['gameweek_id']
+                proceeding_round = df.iloc[index+1]['gameweek_id']
+            except IndexError:
+                print('Preceeding or proceeding gw not found.')
+            else:
+                if abs(round - preceeding_round) > 1 and abs(proceeding_round - round) > 1:
+                    row['gameweek_id'] = preceeding_round
+                    df.iloc[index] = row
+    
+    return df
 
-    row_index = df[df['gameweek_id'] == row['gameweek_id']].index[0]
+
+def get_squad_gameweek_id(row, fpl_player, squad_gameweek_df):
+
+    """Returns squad gameweek id from DB for given row."""
 
     try:
-        preceeding_gw = df.iloc[row_index-1]
-    
-    except IndexError:
-        print('Preceeding gw not found.')
-        return round
-    
+        venue = squad_gameweek_df[(squad_gameweek_df['gameweek_id'] == row['gameweek_id']) &
+                                    (squad_gameweek_df['opposition_id'] == row['opposition_id'])]['venue'].item()
+    except ValueError:
+        sgw_id = None
     else:
-        preceeding_round = int(preceeding_gw['gameweek_id'].split(' ')[1])
-        preceeding_date = preceeding_gw['date']
+        sgw_id = read_squad_gameweek_id(fpl_player.prem_team_id, row['gameweek_id'], row['opposition_id'], venue)
 
-        # Dealing with B/DGWs
-        # If match occurs after preceeding gameweek but its gw id is smaller than the preceeding gameweek then return gameweek id of preceeding gameweek
-        if date > preceeding_date and round < preceeding_round:
-            print(preceeding_round)
-            return preceeding_round
-        else:
-            return round
+    return sgw_id
 
 
 def format_started_col(row):
@@ -371,7 +381,7 @@ def get_elevenify_data():
     try:
         team_strength_df = build_df()
     except KeyError:
-        format_elevenify_data()
+        format_elevenify_data(current_gw_id+1)
         team_strength_df = build_df()
 
     # strength_columns = team_strength_column_map.values()
@@ -511,9 +521,9 @@ def post_gameweek_update():
     update_player(players_df)
     update_squad_gameweek(squad_gameweeks_df)
     update_player_gameweek(player_gameweeks_df)
-    # insert_player_gameweek()
-    # update_gameweek()
-    # update_my_team()
+    insert_player_gameweek()
+    update_gameweek()
+    update_my_team()
 
 
 def update_squad(squads_df: pd.DataFrame):
@@ -664,8 +674,6 @@ def update_player_gameweek(player_gameweeks_df: pd.DataFrame):
 
     for index, row in trimmed_df.iterrows():
         player = Player(row['player_id'])
-        # for index, fixture in enumerate(player.get_fixture(current_gw_id)):
-        # squad_gw_id = read_squad_gameweek_id(player.prem_team_id, current_gw_id, row['opposition_id'])
         squad_gw_id = row['squad_gameweek_id']
         args = [row['started'],
                 row['minutes_played'],
@@ -722,7 +730,7 @@ def update_projected_points(gw_id: int):
             args = format_null_args(args)
             execute_from_file('update_projected_points.sql', tuple(args))
 
-    # execute_from_file('update_next_gameweek.sql', (me.current_team.get_projected_points(gw_id), gw_id))
+    execute_from_file('update_next_gameweek.sql', (me.current_team.get_projected_points(gw_id), gw_id))
 
 
 def update_gameweek():
@@ -736,8 +744,7 @@ def update_gameweek():
                         current_gw['average_entry_score'],
                         gw_id,
                         gw_id)
-    next_gw_args = (me.current_team.get_projected_points(current_gw_id+1),
-                    gw_id+1)
+    next_gw_args = (me.current_team.get_projected_points(current_gw_id+1), gw_id+1)
     
     execute_from_file('update_previous_gameweek.sql', (gw_id-1,))
     execute_from_file('update_current_gameweek.sql', current_gw_args)
@@ -769,6 +776,6 @@ def update_my_team():
 
 if __name__ == '__main__':
     post_gameweek_update()
-    # update_team_strengths(6)
-    # update_projected_points(25)
+    # update_team_strengths(26)
+    # update_projected_points(27)
     

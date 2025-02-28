@@ -8,11 +8,9 @@ import pandas as pd
 
 
 load_dotenv()
-prev_engine = create_engine(f'mysql://app:{os.environ.get('DB_PASS')}@localhost/fpl_model_2324')
-prev_cnx = prev_engine.connect()
 
+prev_engine = create_engine(f'mysql://app:{os.environ.get('DB_PASS')}@localhost/fpl_model_2324')
 current_engine = create_engine(f'mysql://app:{os.environ.get('DB_PASS')}@localhost/fpl_model_2425')
-current_cnx = current_engine.connect()
 
 write_conn = mysql.connector.connect(host='localhost', user='app', password=os.environ.get('DB_PASS'), database='fpl_model_2425')
 
@@ -37,7 +35,7 @@ def read_defence_strength(squad_id: int, gw_id: int):
 
     gw_id = except_future_gw(gw_id)
 
-    return execute_from_str(f'SELECT defence_strength FROM squad_gameweek WHERE squad_id = {squad_id} AND gameweek_id = {gw_id}', current_cnx).fetchone()[0]
+    return execute_from_str(f'SELECT defence_strength FROM squad_gameweek WHERE squad_id = {squad_id} AND gameweek_id = {gw_id}', current_engine.connect()).fetchone()[0]
 
 
 def read_attack_strength(squad_id: int, gw_id: int):
@@ -46,7 +44,7 @@ def read_attack_strength(squad_id: int, gw_id: int):
 
     gw_id = except_future_gw(gw_id)
 
-    return execute_from_str(f'SELECT attack_strength FROM squad_gameweek WHERE squad_id = {squad_id} AND gameweek_id = {gw_id}', current_cnx).fetchone()[0]
+    return execute_from_str(f'SELECT attack_strength FROM squad_gameweek WHERE squad_id = {squad_id} AND gameweek_id = {gw_id}', current_engine.connect()).fetchone()[0]
 
 
 def read_mean_strengths(gw_id: int):
@@ -55,7 +53,7 @@ def read_mean_strengths(gw_id: int):
 
     gw_id = except_future_gw(gw_id)
 
-    results = execute_from_str(f'SELECT AVG(attack_strength), AVG(defence_strength) FROM squad_gameweek WHERE gameweek_id = {gw_id}', current_cnx).fetchall()[0]
+    results = execute_from_str(f'SELECT AVG(attack_strength), AVG(defence_strength) FROM squad_gameweek WHERE gameweek_id = {gw_id}', current_engine.connect()).fetchall()[0]
 
     return float(results[0]), float(results[1])
 
@@ -73,7 +71,7 @@ def read_expected_mins(current_player_id: int, prev_player_id: int | None, gw_id
                 STD(pgw.minutes_played) \
             FROM player_gameweek pgw \
             WHERE pgw.player_id = {current_player_id} AND pgw.started = 1 AND pgw.gameweek_id < {gw_id}'
-    current_results = execute_from_str(query, current_cnx).fetchall()[0]
+    current_results = execute_from_str(query, current_engine.connect()).fetchall()[0]
     
     if prev_player_id is not None:
         query = f'SELECT \
@@ -81,7 +79,7 @@ def read_expected_mins(current_player_id: int, prev_player_id: int | None, gw_id
                     STD(pgw.minutes_played) \
                 FROM player_gameweek pgw \
                 WHERE pgw.player_id = {prev_player_id} AND pgw.started = 1'
-        prev_results = execute_from_str(query, prev_cnx).fetchall()[0]
+        prev_results = execute_from_str(query, prev_engine.connect()).fetchall()[0]
         return weighted_average(float(prev_results[0]), float(current_results[0]), 'mins'), weighted_average(float(prev_results[1]), float(current_results[1]), 'mins')
     
     else:
@@ -99,14 +97,14 @@ def read_start_proportion(current_player_id: int, prev_player_id: int | None, gw
                 SUM(CASE WHEN {current_condition} THEN pgw.started * {last_6_mins_weight} ELSE pgw.started * {older_mins_weight} END)/SUM(CASE WHEN {current_condition} THEN {last_6_mins_weight} ELSE {older_mins_weight} END) \
             FROM player_gameweek pgw \
             WHERE pgw.player_id = {current_player_id} AND pgw.started IS NOT NULL'
-    current_results = execute_from_str(query, current_cnx).fetchall()[0]
+    current_results = execute_from_str(query, current_engine.connect()).fetchall()[0]
 
     if prev_player_id is not None:
         query = f'SELECT \
                     AVG(pgw.started) \
                 FROM player_gameweek pgw \
                 WHERE pgw.player_id = {prev_player_id} AND pgw.started IS NOT NULL'
-        prev_results = execute_from_str(query, prev_cnx).fetchall()[0]
+        prev_results = execute_from_str(query, prev_engine.connect()).fetchall()[0]
         return weighted_average(float(prev_results[0]), float(current_results[0]), 'mins')
     
     else:
@@ -125,13 +123,13 @@ def read_attacking_stats_per_90(current_player_id: int, prev_player_id: int | No
                                             SUM(CASE WHEN {current_condition} THEN ((pgw.npxG/pgw.minutes_played)*90*{last_6_weight}) ELSE ((pgw.npxG/pgw.minutes_played)*90*{older_weight}) END)/SUM(CASE WHEN {current_condition} THEN {last_6_weight} ELSE {older_weight} END), \
                                             SUM(CASE WHEN {current_condition} THEN ((pgw.xA/pgw.minutes_played)*90*{last_6_weight}) ELSE ((pgw.xA/pgw.minutes_played)*90*{older_weight}) END)/SUM(CASE WHEN {current_condition} THEN {last_6_weight} ELSE {older_weight} END) \
                                         FROM player_gameweek pgw \
-                                        WHERE pgw.player_id = {current_player_id}', current_cnx).fetchall()[0]
+                                        WHERE pgw.player_id = {current_player_id}', current_engine.connect()).fetchall()[0]
 
     if prev_player_id is not None:
         prev_condition = f'pgw.gameweek_id >= {gw_id+1}'
         prev_season = execute_from_str(f'SELECT (SUM(pgw.npxG)/SUM(pgw.minutes_played))*90, (SUM(pgw.xA)/SUM(pgw.minutes_played))*90 \
                                         FROM player_gameweek pgw \
-                                        WHERE pgw.player_id = {prev_player_id} AND {prev_condition}', prev_cnx).fetchall()[0]
+                                        WHERE pgw.player_id = {prev_player_id} AND {prev_condition}', prev_engine.connect()).fetchall()[0]
         return weighted_average(prev_season[0], current_season[0], 'x'), weighted_average(prev_season[1], current_season[1], 'x')
     
     else:
@@ -145,13 +143,13 @@ def read_attacking_stats_share(current_player_id: int, prev_player_id: int | Non
     current_season = execute_from_str(f'SELECT (p.npxG/s.npxG), (p.xA/s.xA) \
                                         FROM player p \
                                         JOIN squad s ON p.squad_id = s.id \
-                                        WHERE p.id = {current_player_id}', current_cnx).fetchall()[0]
+                                        WHERE p.id = {current_player_id}', current_engine.connect()).fetchall()[0]
 
     if prev_player_id is not None:
         prev_season = execute_from_str(f'SELECT (p.npxG/s.npxG), (p.xA/s.xA) \
                                         FROM player p \
                                         JOIN squad s ON p.squad_id = s.id \
-                                        WHERE p.id = {prev_player_id}', prev_cnx).fetchall()[0]
+                                        WHERE p.id = {prev_player_id}', prev_engine.connect()).fetchall()[0]
         return weighted_average(prev_season[0], current_season[0], 'x'), weighted_average(prev_season[1], current_season[1], 'x')
     
     else:
@@ -164,12 +162,12 @@ def read_squad_pen_attempts_per_90(current_squad_id: int, prev_squad_id: int | N
 
     current_season = float(execute_from_str(f'SELECT (s.penalty_attempts/s.matches_played) \
                                                 FROM squad s \
-                                                WHERE s.id = {current_squad_id}', current_cnx).fetchone()[0])
+                                                WHERE s.id = {current_squad_id}', current_engine.connect()).fetchone()[0])
     
     if prev_squad_id is not None:
         prev_season = float(execute_from_str(f'SELECT (s.penalty_attempts/s.matches_played) \
                                                 FROM squad s \
-                                                WHERE s.id = {prev_squad_id}', prev_cnx).fetchone()[0])
+                                                WHERE s.id = {prev_squad_id}', prev_engine.connect()).fetchone()[0])
     
         return weighted_average(prev_season, current_season, 'x')
 
@@ -181,8 +179,8 @@ def read_pen_attempts_per_90():
 
     """Returns mean penalty attempts per 90 across all squads."""
 
-    current_season = float(execute_from_str(f'SELECT AVG(s.penalty_attempts/s.matches_played) FROM squad s', current_cnx).fetchone()[0])
-    prev_season = float(execute_from_str(f'SELECT AVG(s.penalty_attempts/s.matches_played) FROM squad s', prev_cnx).fetchone()[0])
+    current_season = float(execute_from_str(f'SELECT AVG(s.penalty_attempts/s.matches_played) FROM squad s', current_engine.connect()).fetchone()[0])
+    prev_season = float(execute_from_str(f'SELECT AVG(s.penalty_attempts/s.matches_played) FROM squad s', prev_engine.connect()).fetchone()[0])
     
     return weighted_average(prev_season, current_season, 'x')
 
@@ -191,7 +189,7 @@ def read_all_player_ids():
 
     """Returns all player ids."""
 
-    results = execute_from_str('SELECT id FROM player', current_cnx).fetchall()
+    results = execute_from_str('SELECT id FROM player', current_engine.connect()).fetchall()
 
     return [i[0] for i in results]
 
@@ -211,7 +209,7 @@ def read_squad_gameweek_id(squad_id: int, gameweek_id: int, opposition_id: int, 
 
     query = f'SELECT id FROM squad_gameweek WHERE squad_id = {squad_id} AND gameweek_id = {gameweek_id} AND opposition_id = {opposition_id} AND venue = "{venue}"'
     try:
-        squad_gameweek_id = int(execute_from_str(query, current_cnx).fetchone()[0])
+        squad_gameweek_id = int(execute_from_str(query, current_engine.connect()).fetchone()[0])
         return squad_gameweek_id
     except TypeError:
         return None
@@ -229,7 +227,7 @@ def read_prev_player_id(player_name: str):
     query = f'SELECT id FROM player WHERE name = "{player_name}"'
 
     try:
-        prev_id = int(execute_from_str(query, prev_cnx).fetchone()[0])
+        prev_id = int(execute_from_str(query, prev_engine.connect()).fetchone()[0])
     except Exception as e:
         print(f'{player_name} was not in prem last season.')
         return None
@@ -246,7 +244,7 @@ def read_prev_squad_id(squad_name: str):
     query = f'SELECT id FROM squad WHERE name = "{squad_name}"'
 
     try:
-        prev_id = int(execute_from_str(query, prev_cnx).fetchone()[0])
+        prev_id = int(execute_from_str(query, prev_engine.connect()).fetchone()[0])
     except Exception as e:
         print(f'{squad_name} were not in prem last season.')
         return None

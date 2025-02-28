@@ -118,7 +118,7 @@ class Player:
         if self.player_summary['status'].lower() == 's' and gw_id != Bootstrap.get_current_gw_id() + 1:
             chance_of_playing = 1
         else:
-            chance_of_playing = min((self.get_chance_of_playing()/100) + 0.25*(gw_id-(Bootstrap.get_current_gw_id()+1)), 1)  # Ensure chance of playing does not exceed 1
+            chance_of_playing = min((self.get_chance_of_playing()/100) + max(0.25*(gw_id-(Bootstrap.get_current_gw_id()+1)), 0), 1)  # Ensure chance of playing does not exceed 1
         
         mean_mins, std_mins = crud.read_expected_mins(self.player_id, self.prev_player_id, gw_id)
         prob_start_given_in_squad = crud.read_start_proportion(self.player_id, self.prev_player_id, gw_id)
