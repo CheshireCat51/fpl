@@ -1,5 +1,5 @@
 import pandas as pd
-import requests
+from requests_html import HTMLSession
 from bs4 import BeautifulSoup, element
 from io import StringIO
 from bootstrap import Bootstrap
@@ -22,6 +22,10 @@ me = User(os.environ.get('ME'))
 current_gw_id = Bootstrap.get_current_gw_id()
 
 fbref_host = 'https://fbref.com'
+
+session = HTMLSession()
+
+squad_map = pd.read_csv('./squad_map.csv', header=0)
 
 squad_column_map = {
     'Squad': 'name',
@@ -266,26 +270,6 @@ def get_squad_id(row):
 
     """Returns squad id from FPL API for given row."""
 
-    # if row['name'] == 'Luton Town':
-    #     name = 'Luton'
-    # elif row['name'] == 'Manchester City':
-    #     name = 'Man City'
-    # elif row['name'] == 'Manchester Utd':
-    #     name = 'Man Utd'
-    # elif row['name'] == 'Newcastle Utd':
-    #     name = 'Newcastle'
-    # elif row['name'] == "Nott'ham Forest":
-    #     name = "Nott'm Forest"
-    # elif row['name'] == 'Tottenham':
-    #     name = 'Spurs'
-    # elif row['name'] == 'Ipswich Town':
-    #     name = 'Ipswich'
-    # elif row['name'] == 'Leicester City':
-    #     name = 'Leicester'
-    # else:
-    #     name = row['name']
-
-    squad_map = pd.read_csv('./squad_map.csv', header=0)
     api_name = squad_map[squad_map['FBRef'] == row['name']]['API'].values[0]
 
     return Bootstrap.get_prem_team_by_name(api_name)['id']
@@ -323,12 +307,12 @@ def get_gameweek_ids(df: pd.DataFrame):
 
     for index, row in df.iterrows():
         round = row['gameweek_id']
-        if 37 >= index >= 1:
+        if len(df.index) - 1 >= index >= 1:
             try:
                 preceeding_round = df.iloc[index-1]['gameweek_id']
                 proceeding_round = df.iloc[index+1]['gameweek_id']
             except IndexError:
-                print('Preceeding or proceeding gw not found.')
+                print(f'Preceeding or proceeding gw not found at index {index}.')
             else:
                 if abs(round - preceeding_round) > 1 and abs(proceeding_round - round) > 1:
                     row['gameweek_id'] = preceeding_round
@@ -404,7 +388,7 @@ def scrape_html(tag: str | element.Tag, table_id: str):
 
     try:
         # Obtain HTML to be soupified
-        r = requests.get(fbref_host + url)
+        r = session.get(fbref_host + url)
 
         # Create Soup object
         soup = BeautifulSoup(r.content, 'lxml')
@@ -777,5 +761,5 @@ def update_my_team():
 if __name__ == '__main__':
     post_gameweek_update()
     # update_team_strengths(26)
-    # update_projected_points(27)
+    # update_projected_points(32)
     

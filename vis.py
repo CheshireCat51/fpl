@@ -42,8 +42,14 @@ def xp_vs_eo(gw_id: int):
 
     max_eo = xp['EO'].max()
     max_pts = xp['Total_Pts'].max()
-    threat_grad = (xp['Total_Pts']*xp['EO']/100)
-    gain_grad = (xp['Total_Pts']*(1-xp['EO']/100))
+    threat_grad = xp['Total_Pts']*xp['EO']/100
+    gain_grad = xp['Total_Pts']*(1-xp['EO']/100)
+
+    xp['threat'] = threat_grad
+    xp['gain'] = gain_grad
+
+    print(xp.sort_values(by='threat', ascending=False).head(15))
+    print(xp.sort_values(by='gain', ascending=False).head(15))
 
     my_team_gain = 0
     for index in xp.index:
@@ -102,5 +108,5 @@ def xp_vs_pts():
 
 
 if __name__ == '__main__':
-    xp_vs_eo(24)
+    xp_vs_eo(30)
     # xp_vs_pts()

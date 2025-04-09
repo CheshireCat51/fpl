@@ -11,13 +11,18 @@ def main():
 
     """Entrypoint for FPL tracker."""
 
+    player = Player(12)
+    print(player.second_name)
+    print(player.get_projected_points(28))
+    print(player.get_expected_mins(28))
+
     # print('Isak')
     # rogers = Player(401)
     # print(rogers.get_projected_points(21))
 
     # print('Wood')
     # rogers = Player(447)
-    # print(rogers.get_projected_points(21))
+    # print(rogers.get_projected_points(28))
 
     # print('Evanilson')
     # rogers = Player(617)

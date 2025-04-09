@@ -58,8 +58,10 @@ def preprocess():
                 'goals': pgw_results[0],
                 'assists': pgw_results[1],
                 'goals_conceded': sgw_results[3],
-                'npxG_per_90': p_results[0],
-                'xA_per_90': p_results[1],
+                # 'npxG_per_90': p_results[0],
+                # 'xA_per_90': p_results[1],
+                'npxG': pgw_results[2],
+                'xA': pgw_results[3],
                 'xMins': pgw_results[5],
                 'points_scored': pgw_results[6],
                 'stat_xPts': pgw_results[8]
@@ -82,8 +84,8 @@ def gradient_boosting():
     df = pd.read_csv('train.csv')
     df = df[df['xMins'] != 0]
 
-    X = df.drop(columns=['points_scored', 'stat_xPts', 'xMins', 'npxG_per_90', 'xA_per_90', 'goals_conceded'])
-    X[['player', 'pos', 'pen_rank', 'gw', 'venue']] = X[['player', 'pos', 'pen_rank', 'gw', 'venue']].astype('category')
+    X = df.drop(columns=['points_scored', 'stat_xPts', 'xMins', 'goals', 'assists', 'goals_conceded', 'gw'])
+    X[['player', 'pos', 'pen_rank', 'venue']] = X[['player', 'pos', 'pen_rank', 'venue']].astype('category')
     y = df['points_scored']
 
     # Step 1: Split data into train, validation, and test sets
@@ -125,15 +127,13 @@ def test(xgb_model, X_test: pd.DataFrame, y_test):
     # Predict on test data
     y_pred = xgb_model.predict(X_test)
 
-    new_test = pd.DataFrame(data=[[328,'MID',2.0,4,'Home',2.21,1.21,1.23,1.58,84.4648,0.5983,0.3895]], columns=X_test.columns)
-    new_test[['player', 'pos', 'pen_rank', 'gw', 'venue']] = new_test[['player', 'pos', 'pen_rank', 'gw', 'venue']].astype('category')
+    new_test = pd.DataFrame(data=[[328,'MID',2.0,'Home',2.21,1.21,1.23,1.58,84.4648,0.5983,0.3895]], columns=X_test.columns)
+    new_test[['player', 'pos', 'pen_rank', 'venue']] = new_test[['player', 'pos', 'pen_rank', 'venue']].astype('category')
 
     # X_test['xMins'] = y_pred[:,0]
     X_test['xPts'] = y_pred
     # X_test['mins'] = y_test['minutes_played']
     X_test['Pts'] = y_test
-    print(X_test)
-    print(len(X_test.columns))
 
     # Evaluate the model
     mae = mean_absolute_error(y_test, y_pred)
@@ -176,6 +176,6 @@ def importance(xgb_model):
 
 
 if __name__ == '__main__':
-    # preprocess()
+    preprocess()
     gradient_boosting()
-    # test_stat_method()
+    test_stat_method()
