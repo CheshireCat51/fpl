@@ -102,6 +102,31 @@ class Bootstrap:
                     break
 
             return selected_player
+        
+    
+    def get_fixture(prem_team_id: int, gw_id: int):
+
+        """Get the fixture(s) for the given GW."""
+
+        gameweek = Bootstrap.session.get(f'https://fantasy.premierleague.com/api/fixtures?team={prem_team_id}&event={gw_id}').json()
+        opponents = []
+
+        for fixture in gameweek:
+            if fixture['team_a'] == prem_team_id: # if player's team are away team...
+                opponent = {
+                    'id': fixture['team_h'],
+                    'name': Bootstrap.get_prem_team_by_id(fixture['team_h'])['name'],
+                    'venue': 'Away'
+                }
+            else: # else if player's team are home team...
+                opponent = {
+                    'id': fixture['team_a'],
+                    'name': Bootstrap.get_prem_team_by_id(fixture['team_a'])['name'],
+                    'venue': 'Home'
+                }
+            opponents.append(opponent)
+        
+        return opponents
     
 
 if __name__ == '__main__':

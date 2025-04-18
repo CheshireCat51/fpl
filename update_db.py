@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 import os
 from utils import format_deadline_str, format_null_args, format_elevenify_data, backup_db
 from player import Player
-from crud import execute_from_file, read_all_player_ids, read_squad_gameweek_id, current_engine
+from crud import execute_from_file, read_all_player_ids, read_squad_gameweek_id
 import time
 from datetime import datetime
 
@@ -306,17 +306,34 @@ def get_gameweek_ids(df: pd.DataFrame):
     df = df.reset_index()
 
     for index, row in df.iterrows():
-        round = row['gameweek_id']
-        if len(df.index) - 1 >= index >= 1:
+        if index > 0:
+            round = row['gameweek_id']
+            rearranged_gw = False
+
             try:
-                preceeding_round = df.iloc[index-1]['gameweek_id']
-                proceeding_round = df.iloc[index+1]['gameweek_id']
+                pre_round = df.iloc[index-1]['gameweek_id']
             except IndexError:
-                print(f'Preceeding or proceeding gw not found at index {index}.')
+                print(f'Preceeding gw not found at index {index}.')
             else:
-                if abs(round - preceeding_round) > 1 and abs(proceeding_round - round) > 1:
-                    row['gameweek_id'] = preceeding_round
-                    df.iloc[index] = row
+                if round - pre_round < 0:  # Did gameweek get moved to later in the season?
+                    rearranged_gw = True
+                else:
+                    rearranged_gw = False
+            
+            if rearranged_gw:
+                try:
+                    post_round = df.iloc[index+1]['gameweek_id']
+                except IndexError:
+                    print(f'Proceeding gw not found at index {index}.')
+                else:
+                    if post_round - round > 0:
+                        rearranged_gw = True
+                    else:
+                        rearranged_gw = False
+
+            if rearranged_gw:
+                row['gameweek_id'] = pre_round
+                df.iloc[index] = row
     
     return df
 
@@ -331,7 +348,10 @@ def get_squad_gameweek_id(row, fpl_player, squad_gameweek_df):
     except ValueError:
         sgw_id = None
     else:
-        sgw_id = read_squad_gameweek_id(fpl_player.prem_team_id, row['gameweek_id'], row['opposition_id'], venue)
+        sgw_id = read_squad_gameweek_id(fpl_player.prem_team_id, row['opposition_id'], venue)
+    
+    if fpl_player.player_id == 401:
+        print(fpl_player.prem_team_id, row['gameweek_id'], row['opposition_id'], sgw_id)
 
     return sgw_id
 
@@ -628,8 +648,8 @@ def insert_player_gameweek():
             args = [int(player_id), int(current_gw_id+1)]
 
             try:
-                squad_gameweek_id = read_squad_gameweek_id(player.prem_team_id, current_gw_id+1, fixture['id'], fixture['venue'])
-                args.append(squad_gameweek_id)
+                sgw_id = read_squad_gameweek_id(player.prem_team_id, fixture['id'], fixture['venue'])
+                args.append(sgw_id)
             except:
                 print(f'Could not find squad gameweek id for player {player_id} in gw {current_gw_id+1}.')
                 args.append(None)
@@ -695,7 +715,7 @@ def update_projected_points(gw_id: int):
     for player_id in all_player_ids:
         player = Player(player_id)
         for index, fixture in enumerate(player.get_fixture(gw_id)):
-            squad_gw_id = read_squad_gameweek_id(player.prem_team_id, gw_id, fixture['id'], fixture['venue'])
+            sgw_id = read_squad_gameweek_id(player.prem_team_id, fixture['id'], fixture['venue'])
             args = []
 
             try:
@@ -710,7 +730,7 @@ def update_projected_points(gw_id: int):
 
             args.append(gw_id)
             args.append(player_id)
-            args.append(squad_gw_id)
+            args.append(sgw_id)
             args = format_null_args(args)
             execute_from_file('update_projected_points.sql', tuple(args))
 
@@ -760,6 +780,6 @@ def update_my_team():
 
 if __name__ == '__main__':
     post_gameweek_update()
-    # update_team_strengths(26)
+    # update_team_strengths(33)
     # update_projected_points(32)
     

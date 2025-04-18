@@ -12,9 +12,6 @@ load_dotenv()
 prev_engine = create_engine(f'mysql://app:{os.environ.get('DB_PASS')}@localhost/fpl_model_2324')
 current_engine = create_engine(f'mysql://app:{os.environ.get('DB_PASS')}@localhost/fpl_model_2425')
 
-prev_cnx = prev_engine.connect()
-current_cnx = current_engine.connect()
-
 write_conn = mysql.connector.connect(host='localhost', user='app', password=os.environ.get('DB_PASS'), database='fpl_model_2425')
 
 # Weights (a 50-50 weighting assumes there is no such thing as "form")
@@ -32,7 +29,36 @@ player_map = pd.read_csv('player_map.csv')
 squad_map = pd.read_csv('squad_map.csv')
 
 
-def read_defence_strength(squad_id: int, gw_id: int):
+def init_cnx(engine: str = 'current'):
+
+    """Connect to the database."""
+
+    try:
+        if engine == 'current':
+            cnx = current_engine.connect()
+        elif engine == 'previous':
+            cnx = prev_engine.connect()
+        else:
+            raise ValueError('Engine must be either "current" or "previous".')
+    except mysql.connector.Error as err:
+        print(f'Error: {err}')
+    else:
+        return cnx
+    
+
+# def refresh_current_cnx(current_cnx: Connection):
+
+#     """Refresh connection to database."""
+
+#     try:
+#         current_cnx.close()
+#     except mysql.connector.Error as err:
+#         print(f'Error: {err}')
+#     else:
+#         return init_cnx()
+
+
+def read_defence_strength(squad_id: int, gw_id: int, current_cnx: Connection = init_cnx()):
 
     """Returns goals conceded against average prem opponent for given squad."""
 
@@ -41,7 +67,7 @@ def read_defence_strength(squad_id: int, gw_id: int):
     return execute_from_str(f'SELECT defence_strength FROM squad_gameweek WHERE squad_id = {squad_id} AND gameweek_id = {gw_id}', current_cnx).fetchone()[0]
 
 
-def read_attack_strength(squad_id: int, gw_id: int):
+def read_attack_strength(squad_id: int, gw_id: int, current_cnx: Connection = init_cnx()):
 
     """Returns goals scored against average prem opponent for given squad."""
 
@@ -50,7 +76,7 @@ def read_attack_strength(squad_id: int, gw_id: int):
     return execute_from_str(f'SELECT attack_strength FROM squad_gameweek WHERE squad_id = {squad_id} AND gameweek_id = {gw_id}', current_cnx).fetchone()[0]
 
 
-def read_mean_strengths(gw_id: int):
+def read_mean_strengths(gw_id: int, current_cnx: Connection = init_cnx()):
 
     """Returns average team attack and defence strengths in order to adjust probability of goals for/against."""
 
@@ -61,7 +87,7 @@ def read_mean_strengths(gw_id: int):
     return float(results[0]), float(results[1])
 
 
-def read_expected_mins(current_player_id: int, prev_player_id: int | None, gw_id: int):
+def read_expected_mins(current_player_id: int, prev_player_id: int | None, gw_id: int, current_cnx: Connection = init_cnx(), prev_cnx: Connection = init_cnx('previous')):
 
     """Returns mean mins played given that the player started and the std of these values.
         Previous 6 gameweeks are weighted at 70% and all gameweeks prior to that at 30%."""
@@ -89,7 +115,7 @@ def read_expected_mins(current_player_id: int, prev_player_id: int | None, gw_id
         return float(current_results[0]), float(current_results[1])
 
 
-def read_start_proportion(current_player_id: int, prev_player_id: int | None, gw_id: int):
+def read_start_proportion(current_player_id: int, prev_player_id: int | None, gw_id: int, current_cnx: Connection = init_cnx(), prev_cnx: Connection = init_cnx('previous')):
 
     """Returns proportion of games that player started when they played."""
 
@@ -114,7 +140,7 @@ def read_start_proportion(current_player_id: int, prev_player_id: int | None, gw
         return float(current_results[0])
 
 
-def read_attacking_stats_per_90(current_player_id: int, prev_player_id: int | None, gw_id: int):
+def read_attacking_stats_per_90(current_player_id: int, prev_player_id: int | None, gw_id: int, current_cnx: Connection = init_cnx(), prev_cnx: Connection = init_cnx('previous')):
 
     """Returns attacking stats per 90. Uses 38-match sample as FPLReview suggests 40 matches is optimal but difficult to integrate here.
     https://fplreview.com/how-accurately-does-xg-data-indicate-player-goalscoring-potential/."""
@@ -139,7 +165,7 @@ def read_attacking_stats_per_90(current_player_id: int, prev_player_id: int | No
         return float(current_season[0]), float(current_season[1])
     
 
-def read_attacking_stats_share(current_player_id: int, prev_player_id: int | None):
+def read_attacking_stats_share(current_player_id: int, prev_player_id: int | None, current_cnx: Connection = init_cnx(), prev_cnx: Connection = init_cnx('previous')):
 
     """Read player's share of squad's attacking data in order to adjust correctly."""
 
@@ -159,7 +185,7 @@ def read_attacking_stats_share(current_player_id: int, prev_player_id: int | Non
         return float(current_season[0]), float(current_season[1])
 
 
-def read_squad_pen_attempts_per_90(current_squad_id: int, prev_squad_id: int | None):
+def read_squad_pen_attempts_per_90(current_squad_id: int, prev_squad_id: int | None, current_cnx: Connection = init_cnx(), prev_cnx: Connection = init_cnx('previous')):
 
     """Returns penalty attempts per 90 for given squad."""
 
@@ -178,7 +204,7 @@ def read_squad_pen_attempts_per_90(current_squad_id: int, prev_squad_id: int | N
         return current_season
     
 
-def read_pen_attempts_per_90():
+def read_pen_attempts_per_90(current_cnx: Connection = init_cnx(), prev_cnx: Connection = init_cnx('previous')):
 
     """Returns mean penalty attempts per 90 across all squads."""
 
@@ -188,7 +214,7 @@ def read_pen_attempts_per_90():
     return weighted_average(prev_season, current_season, 'x')
 
 
-def read_all_player_ids():
+def read_all_player_ids(current_cnx: Connection = init_cnx()):
 
     """Returns all player ids."""
 
@@ -206,11 +232,11 @@ def read_all_player_ids():
 #     return [i[0] for i in results]
 
 
-def read_squad_gameweek_id(squad_id: int, gameweek_id: int, opposition_id: int, venue: str):
+def read_squad_gameweek_id(squad_id: int, opposition_id: int, venue: str, current_cnx: Connection = init_cnx()):
 
     """Returns player gameweek ids for given player on given gameweek."""
 
-    query = f'SELECT id FROM squad_gameweek WHERE squad_id = {squad_id} AND gameweek_id = {gameweek_id} AND opposition_id = {opposition_id} AND venue = "{venue}"'
+    query = f'SELECT id FROM squad_gameweek WHERE squad_id = {squad_id} AND opposition_id = {opposition_id} AND venue = "{venue}"'
     try:
         squad_gameweek_id = int(execute_from_str(query, current_cnx).fetchone()[0])
         return squad_gameweek_id
@@ -218,7 +244,7 @@ def read_squad_gameweek_id(squad_id: int, gameweek_id: int, opposition_id: int, 
         return None
 
 
-def read_prev_player_id(player_name: str):
+def read_prev_player_id(player_name: str, prev_cnx: Connection = init_cnx()):
 
     """Get player id from previous season."""
 
@@ -238,7 +264,7 @@ def read_prev_player_id(player_name: str):
         return prev_id
 
 
-def read_prev_squad_id(squad_name: str):
+def read_prev_squad_id(squad_name: str, prev_cnx: Connection = init_cnx()):
 
     """Get squad id from previous season."""
 

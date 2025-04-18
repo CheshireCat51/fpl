@@ -7,7 +7,7 @@ from user import User
 from manager import Manager
 from dotenv import load_dotenv
 import os
-from crud import execute_from_str, current_cnx
+from crud import execute_from_str, init_cnx
 from bootstrap import Bootstrap
 
 
@@ -15,7 +15,7 @@ from bootstrap import Bootstrap
 load_dotenv()
 
 
-def xp_vs_eo(gw_id: int):
+def xp_vs_eo(gw_id: int = Bootstrap.get_current_gw_id()+1):
 
     """Plot expected points vs expected ownership in order to visualise threat of individual players to a given team."""
 
@@ -96,7 +96,7 @@ def xp_vs_pts():
     current_gw_id = Bootstrap.get_current_gw_id()-1
 
     query = 'SELECT my_projected_points, my_points_scored FROM gameweek'
-    results = execute_from_str(query, current_cnx).fetchall()
+    results = execute_from_str(query, init_cnx()).fetchall()
     projected = [i[0] for i in results]
     realised = [i[1] for i in results]
     gw_range = range(1,current_gw_id+1)
@@ -108,5 +108,5 @@ def xp_vs_pts():
 
 
 if __name__ == '__main__':
-    xp_vs_eo(30)
+    xp_vs_eo()
     # xp_vs_pts()
