@@ -308,32 +308,37 @@ def get_gameweek_ids(df: pd.DataFrame):
     for index, row in df.iterrows():
         if index > 0:
             round = row['gameweek_id']
-            rearranged_gw = False
 
-            try:
-                pre_round = df.iloc[index-1]['gameweek_id']
-            except IndexError:
-                print(f'Preceeding gw not found at index {index}.')
+            if round == current_gw_id + 1 and pd.to_datetime(row['date']) < datetime.now():  # This is for cases where the gameweek immediately after the current one has been merged into the current gameweek to form a DGW
+                row['gameweek_id'] = current_gw_id
+                df.iloc[index] = row
+
             else:
-                if round - pre_round < 0:  # Did gameweek get moved to later in the season?
-                    rearranged_gw = True
-                else:
-                    rearranged_gw = False
-            
-            if rearranged_gw:
+                rearranged_gw = False
                 try:
-                    post_round = df.iloc[index+1]['gameweek_id']
+                    pre_round = df.iloc[index-1]['gameweek_id']
                 except IndexError:
-                    print(f'Proceeding gw not found at index {index}.')
+                    print(f'Preceeding gw not found at index {index}.')
                 else:
-                    if post_round - round > 0:
+                    if round - pre_round < 1:  # Did gameweek get moved to later in the season?
                         rearranged_gw = True
                     else:
                         rearranged_gw = False
+                
+                if rearranged_gw:
+                    try:
+                        post_round = df.iloc[index+1]['gameweek_id']
+                    except IndexError:
+                        print(f'Proceeding gw not found at index {index}.')
+                    else:
+                        if post_round - round > 1:  # Did gameweek get moved to earlier in the season?
+                            rearranged_gw = True
+                        else:
+                            rearranged_gw = False
 
-            if rearranged_gw:
-                row['gameweek_id'] = pre_round
-                df.iloc[index] = row
+                if rearranged_gw:
+                    row['gameweek_id'] = pre_round
+                    df.iloc[index] = row
     
     return df
 
@@ -349,9 +354,6 @@ def get_squad_gameweek_id(row, fpl_player, squad_gameweek_df):
         sgw_id = None
     else:
         sgw_id = read_squad_gameweek_id(fpl_player.prem_team_id, row['opposition_id'], venue)
-    
-    if fpl_player.player_id == 401:
-        print(fpl_player.prem_team_id, row['gameweek_id'], row['opposition_id'], sgw_id)
 
     return sgw_id
 
@@ -782,4 +784,5 @@ if __name__ == '__main__':
     post_gameweek_update()
     # update_team_strengths(33)
     # update_projected_points(32)
+    # update_my_team()
     
