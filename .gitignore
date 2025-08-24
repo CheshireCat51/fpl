@@ -176,9 +176,16 @@ elevenify/
 # Optim data
 team.json
 /optim_data
+player_gameweeks.csv
+squad_gameweeks.csv
+squads.csv
+players.csv
 
 # DB
 /db_backup
 
 # ML
 train.csv
+
+# Debug
+debug_output.txt

@@ -11,47 +11,14 @@ def main():
 
     """Entrypoint for FPL tracker."""
 
-    player = Player(12)
-    print(player.second_name)
-    print(player.get_projected_points(28))
-    print(player.get_expected_mins(28))
+    # squad_gws_df = pd.read_csv('squad_gameweeks.csv')
 
-    # print('Isak')
-    # rogers = Player(401)
-    # print(rogers.get_projected_points(21))
-
-    # print('Wood')
-    # rogers = Player(447)
-    # print(rogers.get_projected_points(28))
-
-    # print('Evanilson')
-    # rogers = Player(617)
-    # print(rogers.get_projected_points(21))
-
-    # print('JP')
-    # rogers = Player(129)
-    # print(rogers.get_projected_points(21))
-
-    # for player_id in [3]:
-    #     try:
-    #         fpl_player = Player(player_id)
-    #     except:
-    #         continue
-    #     print(fpl_player.player_id, fpl_player.second_name)
-    #     for gw_id in [15, 16, 17]:
-    #         # try:
-    #         xp = fpl_player.get_projected_points(gw_id)
-    #         # except Exception as e:
-    #         #     xp = 0
-    #         try:
-    #             xmins = fpl_player.get_expected_mins(gw_id)[0]
-    #         except Exception as e:
-    #             xmins = 0
-            
-            # print(f'GW{gw_id}')
-            # print('xP:', xp)
-            # print('xMins:', xmins)
-            # print('\n')
+    # for player_id in range(2, 20):
+    #     player = Player(player_id)
+    #     print(player.second_name)
+    #     print(player.get_projected_points())
+    #     print(player.get_expected_mins(1))
+    #     print('\n')
 
     # me = Manager(os.environ.get('ME'))
     # gabriel = Player(3)

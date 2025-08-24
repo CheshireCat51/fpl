@@ -5,6 +5,7 @@ from scipy.integrate import quad
 import pandas as pd
 from bootstrap import Bootstrap
 import subprocess
+from bs4 import element
 
 
 def poisson_distribution(k: int, lam: float):
@@ -113,6 +114,33 @@ def backup_db(database, output_file):
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
         return False
+    
+
+def dump_to_debug_output(data, file_name='debug_output.txt'):
+    
+    """Dump data to a debug output file."""
+    with open(file_name, 'w', encoding='utf-8') as f:
+        f.write(str(data))
+
+
+def find_url(pgw_summary_soup: element.Tag, stat_cat: str) -> str:
+
+    """Find the url for the defensive actions page for a player."""
+
+    url = None
+
+    try:
+        filter_divs = pgw_summary_soup.find_all('div', class_='filter')
+    except IndexError:
+        print('Could not find filter div.')
+    else:
+        for filter_div in filter_divs:
+            for link in filter_div.find_all('a'):
+                if stat_cat in link.text:
+                    url = link['href']
+                    break
+    
+    return url
 
 
 # if __name__ == '__main__':
@@ -131,13 +159,16 @@ fpl_points_system = {
         'Clean Sheet': 4,
         'Goal Scored': 6,
         '2 Goals Conceded': -1,
+        'CBIT': 2,
     },
     'MID': {
         'Goal Scored': 5,
-        'Clean Sheet': 1
+        'Clean Sheet': 1,
+        'CBIT': 2
     },
     'FWD': {
         'Goal Scored': 4,
+        'CBIT': 2
     },
     'Other': {
         '< 60 mins': 1,

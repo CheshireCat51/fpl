@@ -1,6 +1,6 @@
 import pandas as pd
 from bootstrap import Bootstrap
-from crud import execute_from_str, current_cnx, read_all_player_ids, read_attacking_stats_per_90
+from crud import execute_from_str, read_all_player_ids, read_attacking_stats_per_90, init_cnx
 from sklearn.model_selection import train_test_split
 import xgboost as xgb
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
@@ -17,7 +17,7 @@ def preprocess():
 
     for player_id in read_all_player_ids():
         player = Player(player_id)
-        print(player.second_name)
+        print(player_id, player.second_name)
         for gw_id in range(2, current_gw_id):
             try:
                 p_results = read_attacking_stats_per_90(player_id, player.prev_player_id, gw_id)
@@ -26,19 +26,19 @@ def preprocess():
 
             pgw_query = f'SELECT goals, assists, npxG, xA, minutes_played, xMins, points_scored, squad_gameweek_id, projected_points FROM player_gameweek WHERE player_id = {player_id} AND gameweek_id = {gw_id} AND minutes_played IS NOT NULL'
             try:
-                pgw_results = execute_from_str(pgw_query, current_cnx).fetchall()[0]
+                pgw_results = execute_from_str(pgw_query, init_cnx()).fetchall()[0]
             except IndexError:
                 continue
 
             sgw_query = f'SELECT venue, attack_strength, defence_strength, goals_conceded, xG, xGC, opposition_id FROM squad_gameweek WHERE id = {pgw_results[7]}'
             try:
-                sgw_results = execute_from_str(sgw_query, current_cnx).fetchall()[0]
+                sgw_results = execute_from_str(sgw_query, init_cnx()).fetchall()[0]
             except IndexError:
                 continue
 
             opp_sgw_query = f'SELECT attack_strength, defence_strength FROM squad_gameweek WHERE squad_id = {sgw_results[6]} AND gameweek_id = {gw_id} AND opposition_id = {player.prem_team_id}'
             try:
-                opp_sgw_results = execute_from_str(opp_sgw_query, current_cnx).fetchall()[0]
+                opp_sgw_results = execute_from_str(opp_sgw_query, init_cnx()).fetchall()[0]
             except IndexError:
                 continue
         
@@ -139,6 +139,7 @@ def test(xgb_model, X_test: pd.DataFrame, y_test):
     mae = mean_absolute_error(y_test, y_pred)
     mse = mean_squared_error(y_test, y_pred)
     r2 = r2_score(y_test, y_pred)
+    print('### ML metrics ###')
     print(f"Mean Absolute Error: {mae:.2f}")
     print(f"Mean Squared Error: {mse:.2f}")
     print(f"R-squared Score: {r2:.2f}")
@@ -162,6 +163,7 @@ def test_stat_method():
     mae = mean_absolute_error(y_test, y_pred)
     mse = mean_squared_error(y_test, y_pred)
     r2 = r2_score(y_test, y_pred)
+    print('### Stat method metrics ###')
     print(f"Mean Absolute Error: {mae:.2f}")
     print(f"Mean Squared Error: {mse:.2f}")
     print(f"R-squared Score: {r2:.2f}")

@@ -25,6 +25,9 @@ class Bootstrap:
             current_gw_id = event['id']
             if event['is_current'] == True:
                 break
+        
+        if current_gw_id == 38:
+            current_gw_id = 0
                 
         return current_gw_id
     
@@ -127,7 +130,3 @@ class Bootstrap:
             opponents.append(opponent)
         
         return opponents
-    
-
-if __name__ == '__main__':
-    print(Bootstrap.get_player_by_name('Ivan Toney'))

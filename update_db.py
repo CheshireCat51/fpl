@@ -1,5 +1,5 @@
 import pandas as pd
-from requests_html import HTMLSession
+import cloudscraper
 from bs4 import BeautifulSoup, element
 from io import StringIO
 from bootstrap import Bootstrap
@@ -7,9 +7,10 @@ from manager import Manager
 from user import User
 from dotenv import load_dotenv
 import os
-from utils import format_deadline_str, format_null_args, format_elevenify_data, backup_db
+from utils import format_deadline_str, format_null_args, format_elevenify_data, backup_db, dump_to_debug_output
 from player import Player
-from crud import execute_from_file, read_all_player_ids, read_squad_gameweek_id
+from crud import execute_from_file, read_all_player_ids, read_squad_gameweek_id, init_cnx
+from column_maps import *
 import time
 from datetime import datetime
 
@@ -23,87 +24,9 @@ current_gw_id = Bootstrap.get_current_gw_id()
 
 fbref_host = 'https://fbref.com'
 
-session = HTMLSession()
+session = cloudscraper.create_scraper()
 
 squad_map = pd.read_csv('./squad_map.csv', header=0)
-
-squad_column_map = {
-    'Squad': 'name',
-    'MP': 'matches_played',
-    'Gls': 'goals',
-    'Ast': 'assists',
-    'PK': 'penalty_goals',
-    'PKatt': 'penalty_attempts',
-    'CrdY': 'yellow_cards',
-    'CrdR': 'red_cards',
-    'xG': 'xG',
-    'xAG': 'xA',
-    'npxG': 'npxG',
-    'PrgC': 'progressive_carries',
-    'PrgP': 'progressive_passes',
-    'Gls.1': 'goals_per_90',
-    'Ast.1': 'assists_per_90',
-    'xG.1': 'xG_per_90',
-    'xAG.1': 'xA_per_90',
-    'npxG.1': 'npxG_per_90'
-}
-
-squad_gw_column_map = {
-    'Date': 'date',
-    'Round': 'gameweek_id',
-    'Opponent': 'name',
-    'Venue': 'venue',
-    'xG': 'xG',
-    'xGA': 'xGC',
-    'GF': 'goals_scored',
-    'GA': 'goals_conceded'
-}
-
-team_strength_column_map = {
-    'Attack': 'attack_strength',
-    'Defence': 'defence_strength',
-    'Overall': 'overall_strength'
-}
-
-player_column_map = {
-    'Player': 'name',
-    'Pos': 'position',
-    'MP': 'matches_played',
-    'Min': 'minutes_played',
-    'Gls': 'goals',
-    'Ast': 'assists',
-    'PK': 'penalty_goals',
-    'PKatt': 'penalty_attempts',
-    'CrdY': 'yellow_cards',
-    'CrdR': 'red_cards',
-    'xG': 'xG',
-    'npxG': 'npxG',
-    'xAG': 'xA',
-    'PrgC': 'progressive_carries',
-    'PrgP': 'progressive_passes',
-    'Gls.1': 'goals_per_90',
-    'Ast.1': 'assists_per_90',
-    'xG.1': 'xG_per_90',
-    'xAG.1': 'xA_per_90',
-    'npxG.1': 'npxG_per_90'
-}
-
-player_gw_column_map = {
-    'Date': 'date',
-    'Round': 'gameweek_id',
-    'Opponent': 'name',
-    'Start': 'started',
-    'Min': 'minutes_played',
-    'Gls': 'goals',
-    'Ast': 'assists',
-    'PK': 'penalty_goals',
-    'PKatt': 'penalty_attempts',
-    'CrdY': 'yellow_cards',
-    'CrdR': 'red_cards',
-    'xG': 'xG',
-    'xAG': 'xA',
-    'npxG': 'npxG',
-}
 
 
 def bulk_update():
@@ -121,6 +44,7 @@ def bulk_update():
     squad_rows = get_next_level_rows(squads_soup, 'th', 'team')
     squads_df = trim_df(squad_column_map, squads_df)
     squads_df['id'] = squads_df.apply(get_squad_id, axis=1)
+    squads_df.to_csv('squads.csv')  # Write to file in case of crash
 
     team_strengths_df = get_elevenify_data()
     # Add squad ids to team strength df
@@ -128,33 +52,34 @@ def bulk_update():
     # Add next gw id (team strengths will be valid for upcoming gameweek)
     team_strengths_df.insert(0, 'gameweek_id', current_gw_id+1)
 
-    squad_gameweeks_df = pd.DataFrame()
+    squad_gws_df = pd.DataFrame()
     players_df = pd.DataFrame()
-    player_gameweeks_df = pd.DataFrame()
+    player_gws_df = pd.DataFrame()
 
     for squad in squad_rows:
         print(squad.text)
         squad_id = squads_df.loc[squads_df['name'] == squad.text, 'id'].item()
 
         # Write squad gameweek breakdown to df
-        squad_gameweek_soup = scrape_html(squad, 'matchlogs_for')
-        squad_gameweek_df = get_df_from_soup(squad_gameweek_soup, header=0)
-        squad_gameweek_df = squad_gameweek_df[squad_gameweek_df['Comp'] == 'Premier League']
-        squad_gameweek_df = trim_df(squad_gw_column_map, squad_gameweek_df)
-        squad_gameweek_df.insert(0, 'squad_id', squad_id)
-        squad_gameweek_df['opposition_id'] = squad_gameweek_df.apply(get_squad_id, axis=1)
-        squad_gameweek_df = get_gameweek_ids(squad_gameweek_df)
-        squad_gameweek_df = squad_gameweek_df.drop('name', axis=1)
-        squad_gameweek_df = squad_gameweek_df.drop('date', axis=1)
+        squad_gw_soup = scrape_html(squad, 'matchlogs_for')
+        squad_gw_df = get_df_from_soup(squad_gw_soup, header=0)
+        squad_gw_df = squad_gw_df[squad_gw_df['Comp'] == 'Premier League']
+        squad_gw_df = trim_df(squad_gw_column_map, squad_gw_df)
+        squad_gw_df.insert(0, 'squad_id', squad_id)
+        squad_gw_df['opposition_id'] = squad_gw_df.apply(get_squad_id, axis=1)
+        squad_gw_df = get_gameweek_ids(squad_gw_df)
+        squad_gw_df = squad_gw_df.drop('name', axis=1)
+        squad_gw_df = squad_gw_df.drop('date', axis=1)
 
         # Get relevant rows to current squad from team strength df
         team_strength_df = team_strengths_df.loc[team_strengths_df['squad_id'] == squad_id]
         # Reset index such that strengths can be found by index
         team_strength_df = team_strength_df.reset_index()
         for strength_col in team_strength_column_map.values():
-            squad_gameweek_df.loc[squad_gameweek_df['gameweek_id'] == current_gw_id+1, strength_col] = team_strength_df.loc[0, strength_col]
+            squad_gw_df.loc[squad_gw_df['gameweek_id'] == current_gw_id+1, strength_col] = team_strength_df.loc[0, strength_col]
 
-        squad_gameweeks_df = pd.concat([squad_gameweeks_df, squad_gameweek_df], axis=0)
+        squad_gws_df = pd.concat([squad_gws_df, squad_gw_df], axis=0)
+        squad_gws_df.to_csv('squad_gameweeks.csv')
 
         # Write players from squad to df
         player_soup = scrape_html(squad, 'stats_standard_9')
@@ -179,6 +104,8 @@ def bulk_update():
         players_df = pd.concat([players_df, player_df], axis=0)
         players_df = players_df.reset_index(drop=True)
 
+        players_df.to_csv('players.csv')
+
         for j in range(len(player_rows)):
             player = player_rows[j]
             matches = matches_rows[j]
@@ -191,53 +118,80 @@ def bulk_update():
                 continue
 
             if fpl_player.position != 'GKP':
-                player_gameweek_soup = scrape_html(matches, 'matchlogs_all')
-                if player_gameweek_soup != None:
-                    player_gameweek_df = get_df_from_soup(player_gameweek_soup)
-                    # Filter out non-prem games
-                    player_gameweek_df = player_gameweek_df[player_gameweek_df['Comp'] == 'Premier League']
+                # Check that there are match logs to retrieve
+                try:
+                    player_gw_soup, player_gw_url = scrape_html(matches, 'matchlogs_all', return_url=True)
+                except Exception:
+                    print(f'Could not retrieve gameweek match log data for player {fpl_player.player_id}: {fpl_player.second_name}.')
+                    continue
+                player_gw_df = get_df_from_soup(player_gw_soup)
+                # Filter out non-prem games
+                player_gw_df = player_gw_df[player_gw_df['Comp'] == 'Premier League']
 
-                    # Check that df is not empty and that the data is related to the player at their current squad
-                    # There could be confusion if a player is on loan from one prem team to another (e.g. Cole Palmer 23/24)
-                    if player_gameweek_df.empty == False and squad_id == fpl_player.prem_team_id:
-                        player_gameweek_df = trim_df(player_gw_column_map, player_gameweek_df)
-                        player_gameweek_df.insert(0, 'player_id', fpl_player.player_id)
-                        player_gameweek_df = get_gameweek_ids(player_gameweek_df)
-                        player_gameweek_df['opposition_id'] = player_gameweek_df.apply(get_squad_id, axis=1)
-                        player_gameweek_df = player_gameweek_df.loc[player_gameweek_df['minutes_played'] != 'On matchday squad, but did not play']  # Remove rows where player was an unused substitute
-                        player_gameweek_df['squad_gameweek_id'] = player_gameweek_df.apply(lambda row: get_squad_gameweek_id(row, fpl_player, squad_gameweek_df), axis=1)
-                        player_gameweek_df['started'] = player_gameweek_df.apply(format_started_col, axis=1)
-                        # player_gameweek_df.insert(0, 'projected_points', 0)
-                        # player_gameweek_df['projected_points'] = player_gameweek_df.apply(lambda row: fpl_player.get_projected_points(row['gameweek_id']), axis=1)
-                        # player_gameweek_df.insert(0, 'xMins', 0)
-                        # player_gameweek_df['xMins'] = player_gameweek_df.apply(lambda row: fpl_player.get_expected_mins(row['gameweek_id'])[0], axis=1)
-                        player_gameweek_df['points_scored'] = player_gameweek_df.apply(lambda row: fpl_player.get_points_scored(row['gameweek_id'], row['opposition_id']), axis=1)
-                        player_gameweek_df = player_gameweek_df.drop('date', axis=1)
-                        player_gameweek_df = player_gameweek_df.drop('name', axis=1)
-                        # player_gameweek_df = player_gameweek_df.drop('opposition_id', axis=1)
-                        
-                        player_gameweeks_df = pd.concat([player_gameweeks_df, player_gameweek_df], axis=0)
-                        
+                # Check that df is not empty and that the data is related to the player at their current squad
+                # There could be confusion if a player is on loan from one prem team to another (e.g. Cole Palmer on loan from Man City to Chelsea in 23/24)
+                if player_gw_df.empty == False and squad_id == fpl_player.prem_team_id:
+                    player_gw_df = trim_pgw_df(fpl_player, squad_gw_df, player_gw_df, player_gw_column_map)
+                    player_gw_df['started'] = player_gw_df.apply(format_started_col, axis=1)
+                    # player_gw_df.insert(0, 'projected_points', 0)
+                    # player_gw_df['projected_points'] = player_gw_df.apply(lambda row: fpl_player.get_projected_points(row['gameweek_id']), axis=1)
+                    # player_gw_df.insert(0, 'xMins', 0)
+                    # player_gw_df['xMins'] = player_gw_df.apply(lambda row: fpl_player.get_expected_mins(row['gameweek_id'])[0], axis=1)
+                    player_gw_df['points_scored'] = player_gw_df.apply(lambda row: fpl_player.get_points_scored(row['gameweek_id'], row['opposition_id']), axis=1)
+                    player_gw_df = player_gw_df.drop('date', axis=1)
+                    player_gw_df = player_gw_df.drop('name', axis=1)
+                    # player_gw_df = player_gw_df.drop('opposition_id', axis=1)
+
+                    # Add defensive actions (CBIT)
+                    defensive_actions_url = player_gw_url.replace('summary', 'defense')
+                    time.sleep(6)
+                    try:
+                        player_gw_defensive_soup = scrape_html(defensive_actions_url, 'matchlogs_all')
+                        player_gw_defensive_df = get_df_from_soup(player_gw_defensive_soup)
+                        player_gw_defensive_df = player_gw_defensive_df[player_gw_defensive_df['Comp'] == 'Premier League']
+                        player_gw_defensive_df = trim_pgw_df(fpl_player, squad_gw_df, player_gw_defensive_df, player_gw_defensive_column_map)
+                        player_gw_defensive_df = player_gw_defensive_df[['player_id', 'squad_gameweek_id', 'clearances', 'blocks', 'interceptions', 'tackles']]
+                        player_gw_df = pd.merge(player_gw_df, player_gw_defensive_df, on=['player_id', 'squad_gameweek_id'], how='left')
+                    except Exception:
+                        print(f'Could not retrieve defensive actions data for player {fpl_player.player_id}. Setting all defensive actions to None.')
+                        player_gw_df['clearances'] = None
+                        player_gw_df['blocks'] = None
+                        player_gw_df['interceptions'] = None
+                        player_gw_df['tackles'] = None
+
+                    # Add ball recoveries (R)
+                    misc_stats_url = defensive_actions_url.replace('defense', 'misc')
+                    time.sleep(6)
+                    try:
+                        player_gw_misc_soup = scrape_html(misc_stats_url, 'matchlogs_all')
+                        player_gw_misc_df = get_df_from_soup(player_gw_misc_soup)
+                        player_gw_misc_df = player_gw_misc_df[player_gw_misc_df['Comp'] == 'Premier League']
+                        player_gw_misc_df = trim_pgw_df(fpl_player, squad_gw_df, player_gw_misc_df, player_gw_misc_column_map)
+                        player_gw_misc_df = player_gw_misc_df[['player_id', 'squad_gameweek_id', 'recoveries']]
+                        player_gw_df = pd.merge(player_gw_df, player_gw_misc_df, on=['player_id', 'squad_gameweek_id'], how='left')
+                    except Exception:
+                        print(f'Could not retrieve recoveries data for player {fpl_player.player_id}. Setting recoveries to None.')
+                        player_gw_df['recoveries'] = None
+                    
+                    # Append player gameweek df to bottom of player gameweeks df
+                    player_gws_df = pd.concat([player_gws_df, player_gw_df], axis=0)
+                    
+                    # Write to file in case of crash
+                    player_gws_df.to_csv('player_gameweeks.csv')
+                
                 time.sleep(6.5)
 
     players_df = remove_duplicate_players(players_df)
 
-    # gameweeks_df.to_excel('gameweeks.xlsx')
-    # my_team_df.to_excel('my_team.xlsx')
-    # squads_df.to_excel('squads.xlsx')
-    # squad_gameweeks_df.to_excel('squad_gameweeks.xlsx')
-    # players_df.to_excel('players.xlsx')
-    # player_gameweeks_df.to_excel('player_gameweeks.xlsx')
-
-    # current_cnx = current_engine.connect()
+    # current_cnx = init_cnx()
     # gameweeks_df.to_sql('gameweek', con=current_cnx, if_exists='append', index=False)
     # my_team_df.to_sql('my_team', con=current_cnx, if_exists='append', index=False)
     # squads_df.to_sql('squad', con=current_cnx, if_exists='append', index=False)
-    # squad_gameweeks_df.to_sql('squad_gameweek', con=current_cnx, if_exists='append', index=False)
+    # squad_gws_df.to_sql('squad_gameweek', con=current_cnx, if_exists='append', index=False)
     # players_df.to_sql('player', con=current_cnx, if_exists='append', index=False)
-    # player_gameweeks_df.to_sql('player_gameweek', con=current_cnx, if_exists='append', index=False)
+    # player_gws_df.to_sql('player_gameweek', con=current_cnx, if_exists='append', index=False)
                 
-    return squads_df, players_df, squad_gameweeks_df, player_gameweeks_df
+    return squads_df, players_df, squad_gws_df, player_gws_df
 
 
 def trim_df(column_map, df: pd.DataFrame):
@@ -249,6 +203,20 @@ def trim_df(column_map, df: pd.DataFrame):
     df = df.rename(columns=column_map)
 
     return df
+
+
+def trim_pgw_df(fpl_player, squad_gw_df, player_gw_df, player_gw_column_map):
+
+    """Returns df w/ only desired columns and renamed to match db schema."""
+
+    player_gw_df = trim_df(player_gw_column_map, player_gw_df)
+    player_gw_df.insert(0, 'player_id', fpl_player.player_id)
+    player_gw_df = get_gameweek_ids(player_gw_df)
+    player_gw_df['opposition_id'] = player_gw_df.apply(get_squad_id, axis=1)
+    player_gw_df = player_gw_df.loc[player_gw_df['minutes_played'] != 'On matchday squad, but did not play']  # Remove rows where player was an unused substitute
+    player_gw_df['squad_gameweek_id'] = player_gw_df.apply(lambda row: get_squad_gameweek_id(row, fpl_player, squad_gw_df), axis=1)
+
+    return player_gw_df
 
 
 def remove_duplicate_players(players_df: pd.DataFrame):
@@ -343,13 +311,13 @@ def get_gameweek_ids(df: pd.DataFrame):
     return df
 
 
-def get_squad_gameweek_id(row, fpl_player, squad_gameweek_df):
+def get_squad_gameweek_id(row, fpl_player, squad_gw_df):
 
     """Returns squad gameweek id from DB for given row."""
 
     try:
-        venue = squad_gameweek_df[(squad_gameweek_df['gameweek_id'] == row['gameweek_id']) &
-                                    (squad_gameweek_df['opposition_id'] == row['opposition_id'])]['venue'].item()
+        venue = squad_gw_df[(squad_gw_df['gameweek_id'] == row['gameweek_id']) &
+                            (squad_gw_df['opposition_id'] == row['opposition_id'])]['venue'].item()
     except ValueError:
         sgw_id = None
     else:
@@ -397,7 +365,7 @@ def get_elevenify_data():
     return team_strength_df
 
 
-def scrape_html(tag: str | element.Tag, table_id: str):
+def scrape_html(tag: str | element.Tag, table_id: str, return_url: bool = False) -> element.Tag:
 
     """Returns a dataframe containing data from table with given table id and a soup objecting containing relevant rows from next table."""
 
@@ -408,22 +376,39 @@ def scrape_html(tag: str | element.Tag, table_id: str):
         # If url passed in as string
         url = tag
 
+    # Obtain HTML to be soupified
     try:
-        # Obtain HTML to be soupified
         r = session.get(fbref_host + url)
-
-        # Create Soup object
-        soup = BeautifulSoup(r.content, 'lxml')
-
-        # Find appropriate table
-        table = soup.find('table', {'id': table_id})
+        response_html = r.content.decode("utf-8", errors="ignore")
     except:
-        return None
+        print()
+        raise Exception(f"Unable to obtain response from FBRef at URL {str(fbref_host) + str(url)}. Check internet connection.")
+
+    # Create Soup object
+    try:
+        soup = BeautifulSoup(response_html, 'lxml')
+    except:
+        dump_to_debug_output(soup.prettify())
+        raise Exception("Unable to create soup object. Check debug output.")
+    
+    # Find appropriate table
+    table = soup.find('table', {'id': table_id})
+
+    if table is None:
+        jail_warning = "We apologize, but you have triggered rate limiting by our cloud service provider."
+        if jail_warning in str(soup):
+            raise Exception("FBRef rate limit exceeded. Try again in 5 mins. If this error persists, try again in an hour.")
+        else:
+            dump_to_debug_output(soup.prettify())
+            raise Exception("Unidentifiable error when scraping HTML. Check the debug output and internet connection.")
     else:
-        return table
+        if return_url:
+            return table, r.url.replace(fbref_host, '')
+        else:
+            return table
     
 
-def get_df_from_soup(soup_table, header: int = 1):
+def get_df_from_soup(soup_table: element.Tag, header: int = 1):
 
     """Returns df from soup table."""
 
@@ -433,7 +418,7 @@ def get_df_from_soup(soup_table, header: int = 1):
     return table_df
 
 
-def get_next_level_rows(soup_table, tag_type: str, data_stat: str):
+def get_next_level_rows(soup_table: element.Tag, tag_type: str, data_stat: str):
 
     """Returns required rows from given soup table."""
 
@@ -515,18 +500,18 @@ def post_gameweek_update():
 
     """Update db immediately after gameweek ends."""
 
-    success = backup_db('fpl_model_2425', './db_backup/fpl_model_2425.sql')
+    success = backup_db('fpl_model_2526', './db_backup/fpl_model_2526.sql')
     if success:
         print('Successfully dumped DB.')
     else:
         print('Failed to dump DB.')
 
-    squads_df, players_df, squad_gameweeks_df, player_gameweeks_df = bulk_update()
+    squads_df, players_df, squad_gws_df, player_gws_df = bulk_update()
 
     update_squad(squads_df)
     update_player(players_df)
-    update_squad_gameweek(squad_gameweeks_df)
-    update_player_gameweek(player_gameweeks_df)
+    update_squad_gameweek(squad_gws_df)
+    update_player_gameweek(player_gws_df)
     insert_player_gameweek()
     update_gameweek()
     update_my_team()
@@ -589,11 +574,11 @@ def update_player(players_df: pd.DataFrame):
                 print(args)
 
 
-def update_squad_gameweek(squad_gameweeks_df: pd.DataFrame):
+def update_squad_gameweek(squad_gws_df: pd.DataFrame):
 
     """Update squad gameweek table."""
 
-    only_current_and_next_gw_df = squad_gameweeks_df[(squad_gameweeks_df['gameweek_id'] == current_gw_id) | (squad_gameweeks_df['gameweek_id'] == current_gw_id+1)]
+    only_current_and_next_gw_df = squad_gws_df[(squad_gws_df['gameweek_id'] == current_gw_id) | (squad_gws_df['gameweek_id'] == current_gw_id+1)]
 
     # For each squad...
     for i in range(1, 21):
@@ -672,11 +657,11 @@ def insert_player_gameweek():
             execute_from_file('insert_player_gameweek.sql', tuple(args))
 
 
-def update_player_gameweek(player_gameweeks_df: pd.DataFrame):
+def update_player_gameweek(player_gws_df: pd.DataFrame):
 
     """Update player gameweek row for gameweek just gone."""
 
-    trimmed_df = player_gameweeks_df[player_gameweeks_df['gameweek_id'] == current_gw_id]
+    trimmed_df = player_gws_df[player_gws_df['gameweek_id'] == current_gw_id]
 
     for index, row in trimmed_df.iterrows():
         player = Player(row['player_id'])
@@ -689,6 +674,11 @@ def update_player_gameweek(player_gameweeks_df: pd.DataFrame):
                 row['penalty_attempts'],
                 row['yellow_cards'],
                 row['red_cards'],
+                row['clearances'],
+                row['blocks'],
+                row['interceptions'],
+                row['recoveries'],
+                row['tackles'],
                 row['xG'],
                 row['npxG'],
                 row['xA'],
@@ -782,7 +772,8 @@ def update_my_team():
 
 if __name__ == '__main__':
     post_gameweek_update()
-    # update_team_strengths(33)
+    # update_team_strengths(3)
     # update_projected_points(32)
     # update_my_team()
+    # bulk_update()
     

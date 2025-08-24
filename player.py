@@ -7,28 +7,42 @@ import crud
 class Player:
 
     def __init__(self, player_id: int):
-        for player in Bootstrap.all_players:
-            if player['id'] == player_id:
-                self.player_summary = player
-                break
+        self.player_summary = Player.search_for_player(player_id)
 
         self.player_id = player_id
-        self.first_name = player['first_name']
-        self.second_name = player['second_name']
+        self.first_name = self.player_summary['first_name']
+        self.second_name = self.player_summary['second_name']
         self.full_name = self.first_name + ' ' + self.second_name
         self.prev_player_id = crud.read_prev_player_id(self.full_name)
         self.position = self.find_position()
-        self.penalty_rank = player['penalties_order']
+        self.penalty_rank = self.player_summary['penalties_order']
 
         prem_team = Bootstrap.get_prem_team_by_id(self.player_summary['team'])
         self.prem_team_id = prem_team['id']
         self.prem_team_name = prem_team['name']
         self.prev_prem_team_id = crud.read_prev_squad_id(self.prem_team_name)
         
-        self.ownership = player['selected_by_percent']
-        self.current_price = player['now_cost']
+        self.ownership = self.player_summary['selected_by_percent']
+        self.current_price = self.player_summary['now_cost']
 
         self.player_details = Bootstrap.session.get(f'https://fantasy.premierleague.com/api/element-summary/{self.player_id}/').json()
+
+
+    def search_for_player(player_id: int):
+        
+        """Check if player exists in FPL API."""
+
+        player_exists = False
+
+        for player in Bootstrap.all_players:
+            if player['id'] == player_id:
+                player_exists = True
+                break
+
+        if player_exists is False:
+            raise Exception(f'Player with id {player_id} does not exist in FPL API.')
+        else:
+            return player
     
 
     def find_position(self) -> str:
@@ -147,13 +161,14 @@ class Player:
                     mins_ev = Player.get_mins_returns(mean_mins, std_mins)
                     attacking_ev = self.get_attacking_returns_per_90(mean_defence_strength, opponent_id, gw_id)
                     pen_ev = self.get_penalty_returns_per_90(gw_id)
+                    cbit_ev = self.get_cbit_returns_per_90()
 
                     if self.position != 'FWD':
                         defensive_ev = self.get_defensive_returns_per_90(mean_attack_strength, opponent_id, gw_id)
                     else:
                         defensive_ev = 0
 
-                    total_ev += mins_ev + (defensive_ev + attacking_ev + pen_ev + save_ev)*(mean_mins/90)
+                    total_ev += mins_ev + (defensive_ev + attacking_ev + pen_ev + cbit_ev + save_ev)*(mean_mins/90)
 
                     # print('Mins:', mins_ev)
                     # print('### Per 90 ###')
@@ -178,9 +193,9 @@ class Player:
             
         elif std_mins == 0:
             if mean_mins > 60:
-                return 2
+                return fpl_points_system['Other']['>= 60 mins']
             elif 0 < mean_mins < 60:
-                return 1
+                return fpl_points_system['Other']['< 60 mins']
             else:
                 return 0
 
@@ -285,6 +300,36 @@ class Player:
 
         return pen_ev
     
+
+    def get_cbit_returns_per_90(self):
+
+        """Returns EV due to clearances, blocks, interceptions and tackles."""
+
+        if self.position == 'DEF':
+            mean_cbit, std_cbit = crud.read_cbit_per_90(self.player_id, self.prev_player_id)
+            cbit_threshold = 10
+        elif self.position in ['MID', 'FWD']:
+            mean_cbit, std_cbit = crud.read_cbirt_per_90(self.player_id, self.prev_player_id)
+            cbit_threshold = 12
+        else:
+            raise Exception(f'Position {self.position} not recognised for CBI(R)T returns.')
+
+        if std_cbit > 0:
+            if mean_cbit > 0:
+                # Work out likelihood of getting above CBI(R)T threshold
+                chance_above_threshold = normal_distribution(mean_cbit, std_cbit, (cbit_threshold, 50))
+                above_threshold_ev = chance_above_threshold*fpl_points_system[self.position]['CBIT']
+                print('Chance of scoring CBI(R)T points:', chance_above_threshold*100, '%')
+                return above_threshold_ev
+            else:
+                return 0
+            
+        elif std_cbit == 0:
+            if mean_cbit > cbit_threshold:
+                return fpl_points_system[self.position]['CBIT']
+            else:
+                return 0
+
 
     def get_rank_gain_per_point_scored(self):
         
