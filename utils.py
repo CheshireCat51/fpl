@@ -159,16 +159,16 @@ fpl_points_system = {
         'Clean Sheet': 4,
         'Goal Scored': 6,
         '2 Goals Conceded': -1,
-        'CBIT': 2,
+        'Defensive Contribution': 2,
     },
     'MID': {
         'Goal Scored': 5,
         'Clean Sheet': 1,
-        'CBIT': 2
+        'Defensive Contribution': 2
     },
     'FWD': {
         'Goal Scored': 4,
-        'CBIT': 2
+        'Defensive Contribution': 2
     },
     'Other': {
         '< 60 mins': 1,

@@ -44,7 +44,7 @@ def bulk_update():
     squad_rows = get_next_level_rows(squads_soup, 'th', 'team')
     squads_df = trim_df(squad_column_map, squads_df)
     squads_df['id'] = squads_df.apply(get_squad_id, axis=1)
-    squads_df.to_csv('squads.csv')  # Write to file in case of crash
+    squads_df.to_csv('./tmp/squads.csv')  # Write to file in case of crash
 
     team_strengths_df = get_elevenify_data()
     # Add squad ids to team strength df
@@ -79,7 +79,7 @@ def bulk_update():
             squad_gw_df.loc[squad_gw_df['gameweek_id'] == current_gw_id+1, strength_col] = team_strength_df.loc[0, strength_col]
 
         squad_gws_df = pd.concat([squad_gws_df, squad_gw_df], axis=0)
-        squad_gws_df.to_csv('squad_gameweeks.csv')
+        squad_gws_df.to_csv('./tmp/squad_gameweeks.csv')
 
         # Write players from squad to df
         player_soup = scrape_html(squad, 'stats_standard_9')
@@ -87,15 +87,12 @@ def bulk_update():
         player_rows = get_next_level_rows(player_soup, tag_type='th', data_stat='player')
         matches_rows = get_next_level_rows(player_soup, tag_type='td', data_stat='matches')
         assert len(player_rows) == len(matches_rows)
-        # Remove bottom two rows of player df (these are summary rows)
-        player_df = player_df.iloc[:-2]
+        player_df = player_df.iloc[:-2]  # Remove bottom two rows of player df (these are summary rows)
         player_df = trim_df(player_column_map, player_df)
         player_df.insert(0, 'squad_id', squad_id)
         player_df['id'] = player_df.apply(get_player_id, axis=1)
-        # Drop rows where id is null
-        player_df = player_df.dropna(subset='id')
-        # Change id column to integer type
-        player_df['id'] = player_df['id'].astype('int')
+        player_df = player_df.dropna(subset='id')  # Drop rows where id is null
+        player_df['id'] = player_df['id'].astype('int')  # Change id column to integer type
         player_df['position'] = player_df.apply(lambda row: Player(row['id']).position, axis=1)
         # player_df['ownership'] = player_df.apply(lambda row: Player(row['id']).ownership, axis=1)
         # player_df['current_price'] = player_df.apply(lambda row: Player(row['id']).current_price, axis=1)
@@ -104,7 +101,7 @@ def bulk_update():
         players_df = pd.concat([players_df, player_df], axis=0)
         players_df = players_df.reset_index(drop=True)
 
-        players_df.to_csv('players.csv')
+        players_df.to_csv('./tmp/players.csv')
 
         for j in range(len(player_rows)):
             player = player_rows[j]
@@ -177,7 +174,7 @@ def bulk_update():
                     player_gws_df = pd.concat([player_gws_df, player_gw_df], axis=0)
                     
                     # Write to file in case of crash
-                    player_gws_df.to_csv('player_gameweeks.csv')
+                    player_gws_df.to_csv('./tmp/player_gameweeks.csv')
                 
                 time.sleep(6.5)
 
@@ -607,8 +604,7 @@ def update_team_strengths(gw_id: int):
     """Update team strengths for given squad and gameweek."""
 
     for squad_id in range(1, 21):
-        team_strengths_df = pd.read_csv(f'./elevenify/elev_{gw_id}.csv', sep=',', header=0)
-        team_strengths_df = trim_df(team_strength_column_map, team_strengths_df)
+        team_strengths_df = get_elevenify_data()
         team_strengths_df.insert(0, 'squad_id', list(range(1, len(team_strengths_df.index)+1)))
         team_strength_df = team_strengths_df.loc[team_strengths_df['squad_id'] == squad_id]
         team_strength_df = team_strength_df.reset_index()
@@ -771,9 +767,9 @@ def update_my_team():
 
 
 if __name__ == '__main__':
-    post_gameweek_update()
+    # post_gameweek_update()
     # update_team_strengths(3)
-    # update_projected_points(32)
+    update_projected_points(3)
     # update_my_team()
     # bulk_update()
     

@@ -160,15 +160,15 @@ class Player:
                     save_ev = 0
                     mins_ev = Player.get_mins_returns(mean_mins, std_mins)
                     attacking_ev = self.get_attacking_returns_per_90(mean_defence_strength, opponent_id, gw_id)
-                    pen_ev = self.get_penalty_returns_per_90(gw_id)
-                    cbit_ev = self.get_cbit_returns_per_90()
+                    pen_ev, _ = self.get_penalty_returns_per_90(gw_id)
+                    def_con_ev = self.get_def_con_returns_per_90()
 
                     if self.position != 'FWD':
                         defensive_ev = self.get_defensive_returns_per_90(mean_attack_strength, opponent_id, gw_id)
                     else:
                         defensive_ev = 0
 
-                    total_ev += mins_ev + (defensive_ev + attacking_ev + pen_ev + cbit_ev + save_ev)*(mean_mins/90)
+                    total_ev += mins_ev + (defensive_ev + attacking_ev + pen_ev + def_con_ev + save_ev)*(mean_mins/90)
 
                     # print('Mins:', mins_ev)
                     # print('### Per 90 ###')
@@ -279,12 +279,13 @@ class Player:
             Assumes penalty has 0.76 xG and a maximum of 5 pens per squad per game. Need to adjust for player penalty conversion rate."""
         
         pen_ev = 0
+        pen_share = 0
         pen_xG = 0.76
 
         if self.penalty_rank is not None:
             mean_pen_attempts_per_90 = crud.read_pen_attempts_per_90()
             squad_pen_xG_per_90 = mean_pen_attempts_per_90*pen_xG
-            prob_takes_pen = self.get_expected_mins(gw_id)[0]/90
+            pen_share = self.get_expected_mins(gw_id)[0]/90
 
             if self.penalty_rank != 1:
                 for pen_taker in [i for i in Bootstrap.all_players if i['team'] == self.prem_team_id and i['penalties_order'] is not None]:
@@ -292,41 +293,41 @@ class Player:
                     if pen_taker['penalties_order'] < self.penalty_rank:
                         try:
                             superior_pen_taker = Player(pen_taker['id'])
-                            prob_takes_pen *= 1-(superior_pen_taker.get_expected_mins(gw_id)[0]/90)
+                            pen_share *= 1-(superior_pen_taker.get_expected_mins(gw_id)[0]/90)
                         except:
                             print(f'Missing penalty data for player {superior_pen_taker.player_id}: {superior_pen_taker.first_name + ' ' + superior_pen_taker.second_name}')
             
-            pen_ev = prob_takes_pen*squad_pen_xG_per_90*fpl_points_system[self.position]['Goal Scored']
+            pen_ev = pen_share*squad_pen_xG_per_90*fpl_points_system[self.position]['Goal Scored']
 
-        return pen_ev
+        return pen_ev, pen_share
     
 
-    def get_cbit_returns_per_90(self):
+    def get_def_con_returns_per_90(self):
 
         """Returns EV due to clearances, blocks, interceptions and tackles."""
 
         if self.position == 'DEF':
-            mean_cbit, std_cbit = crud.read_cbit_per_90(self.player_id, self.prev_player_id)
-            cbit_threshold = 10
+            mean_def_con, std_def_con = crud.read_cbit_per_90(self.player_id, self.prev_player_id)
+            def_con_threshold = 10
         elif self.position in ['MID', 'FWD']:
-            mean_cbit, std_cbit = crud.read_cbirt_per_90(self.player_id, self.prev_player_id)
-            cbit_threshold = 12
+            mean_def_con, std_def_con = crud.read_cbirt_per_90(self.player_id, self.prev_player_id)
+            def_con_threshold = 12
         else:
             raise Exception(f'Position {self.position} not recognised for CBI(R)T returns.')
 
-        if std_cbit > 0:
-            if mean_cbit > 0:
+        if std_def_con > 0:
+            if mean_def_con > 0:
                 # Work out likelihood of getting above CBI(R)T threshold
-                chance_above_threshold = normal_distribution(mean_cbit, std_cbit, (cbit_threshold, 50))
-                above_threshold_ev = chance_above_threshold*fpl_points_system[self.position]['CBIT']
-                print('Chance of scoring CBI(R)T points:', chance_above_threshold*100, '%')
+                chance_above_threshold = normal_distribution(mean_def_con, std_def_con, (def_con_threshold, 50))
+                above_threshold_ev = chance_above_threshold*fpl_points_system[self.position]['Defensive Contribution']
+                # print('Chance of scoring CBI(R)T points:', chance_above_threshold*100, '%')
                 return above_threshold_ev
             else:
                 return 0
             
-        elif std_cbit == 0:
-            if mean_cbit > cbit_threshold:
-                return fpl_points_system[self.position]['CBIT']
+        elif std_def_con == 0:
+            if mean_def_con > def_con_threshold:
+                return fpl_points_system[self.position]['Defensive Contribution']
             else:
                 return 0
 

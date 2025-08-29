@@ -11,14 +11,11 @@ def main():
 
     """Entrypoint for FPL tracker."""
 
-    # squad_gws_df = pd.read_csv('squad_gameweeks.csv')
-
-    # for player_id in range(2, 20):
-    #     player = Player(player_id)
-    #     print(player.second_name)
-    #     print(player.get_projected_points())
-    #     print(player.get_expected_mins(1))
-    #     print('\n')
+    for player_id in [505]:
+        player = Player(player_id)
+        print(player.second_name)
+        print(player.get_projected_points())
+        print('\n')
 
     # me = Manager(os.environ.get('ME'))
     # gabriel = Player(3)

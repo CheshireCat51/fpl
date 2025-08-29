@@ -278,7 +278,7 @@ def read_prev_player_id(player_name: str, prev_cnx: Connection = init_cnx('previ
     try:
         player_name = player_map[player_map['API'] == player_name]['FBRef'].values[0]
     except IndexError:
-        return None
+        pass
         
     query = f'SELECT id FROM player WHERE name = "{player_name}"'
 
@@ -343,9 +343,8 @@ def execute_from_str(query_str: str, cnx: Connection, stat_query: bool = True, f
         result = cnx.execute(text(query_str)).fetchall()
     else:
         result = cnx.execute(text(query_str)).fetchone()
-
-    if stat_query and all(i is None for i in result):
-        result = tuple(0 for _ in result)
+        if stat_query and all(i is None for i in result):
+            result = tuple(0 for _ in result)
     
     return result
 

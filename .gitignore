@@ -189,3 +189,4 @@ train.csv
 
 # Debug
 debug_output.txt
+tmp/

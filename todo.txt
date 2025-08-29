@@ -3,6 +3,6 @@
 - Modulise bulk update
 - Spread market odds
 - RMSE and R^2 errors in gameweek table
-- ML
 - Integrate expected player return date into xMins calculation
 - Realistic injury return dates
+- Fix pen rank in ML (there may be more pen takers in some teams resulting in higher pen ranks)
