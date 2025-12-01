@@ -116,7 +116,7 @@ def backup_db(database, output_file):
         return False
     
 
-def dump_to_debug_output(data, file_name='debug_output.txt'):
+def dump_to_debug_output(data, file_name='debug_output.log'):
     
     """Dump data to a debug output file."""
     with open(file_name, 'w', encoding='utf-8') as f:

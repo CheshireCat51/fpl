@@ -20,7 +20,7 @@ class Player:
         prem_team = Bootstrap.get_prem_team_by_id(self.player_summary['team'])
         self.prem_team_id = prem_team['id']
         self.prem_team_name = prem_team['name']
-        self.prev_prem_team_id = crud.read_prev_squad_id(self.prem_team_name)
+        self.prev_prem_team_id = crud.read_squad_id(self.prem_team_name)
         
         self.ownership = self.player_summary['selected_by_percent']
         self.current_price = self.player_summary['now_cost']

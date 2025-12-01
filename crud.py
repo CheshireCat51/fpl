@@ -289,9 +289,9 @@ def read_prev_player_id(player_name: str, prev_cnx: Connection = init_cnx('previ
         return None
     else:
         return prev_id
+    
 
-
-def read_prev_squad_id(squad_name: str, prev_cnx: Connection = init_cnx('previous')):
+def read_squad_id(squad_name: str, cnx: Connection = init_cnx('previous')):
 
     """Get squad id from previous season."""
 
@@ -300,12 +300,12 @@ def read_prev_squad_id(squad_name: str, prev_cnx: Connection = init_cnx('previou
     query = f'SELECT id FROM squad WHERE name = "{squad_name}"'
 
     try:
-        prev_id = int(execute_from_str(query, prev_cnx, stat_query=False)[0])
+        squad_id = int(execute_from_str(query, cnx, stat_query=False)[0])
     except Exception as e:
         print(f'{squad_name} were not in prem last season.')
         return None
     else:
-        return prev_id
+        return squad_id
 
 
 def weighted_average(prev_val: float, current_val: float, weights: str):

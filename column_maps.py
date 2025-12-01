@@ -31,6 +31,7 @@ squad_gw_column_map = {
 }
 
 team_strength_column_map = {
+    'Team': 'name',
     'Attack': 'attack_strength',
     'Defence': 'defence_strength',
     'Overall': 'overall_strength'

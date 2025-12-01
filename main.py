@@ -11,10 +11,11 @@ def main():
 
     """Entrypoint for FPL tracker."""
 
-    for player_id in [505]:
+    for player_id in [16]:
         player = Player(player_id)
         print(player.second_name)
-        print(player.get_projected_points())
+        print(crud.read_attacking_stats_per_90(player_id, crud.read_prev_player_id(player.full_name, crud.init_cnx('previous')), 5))
+        print(player.get_projected_points(8))
         print('\n')
 
     # me = Manager(os.environ.get('ME'))

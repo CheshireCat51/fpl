@@ -48,7 +48,8 @@ def bulk_update():
 
     team_strengths_df = get_elevenify_data()
     # Add squad ids to team strength df
-    team_strengths_df.insert(0, 'squad_id', list(range(1, len(team_strengths_df.index)+1)))
+    # team_strengths_df.insert(0, 'squad_id', list(range(1, len(team_strengths_df.index)+1)))
+    team_strengths_df['squad_id'] = team_strengths_df.apply(lambda row: get_squad_id(row, source='elevenify'), axis=1)
     # Add next gw id (team strengths will be valid for upcoming gameweek)
     team_strengths_df.insert(0, 'gameweek_id', current_gw_id+1)
 
@@ -231,11 +232,11 @@ def remove_duplicate_players(players_df: pd.DataFrame):
     return players_df
 
 
-def get_squad_id(row):
+def get_squad_id(row, source: str = 'FBRef'):
 
     """Returns squad id from FPL API for given row."""
 
-    api_name = squad_map[squad_map['FBRef'] == row['name']]['API'].values[0]
+    api_name = squad_map[squad_map[source] == row['name']]['API'].values[0]
 
     return Bootstrap.get_prem_team_by_name(api_name)['id']
 
@@ -340,24 +341,20 @@ def get_url_from_anchor(element):
     return element.find('a').get('href')
 
 
-def get_elevenify_data():
+def get_elevenify_data(gw_id: int = current_gw_id+1):
 
     """Returns dataframe of team strengths from Elevenify."""
 
     def build_df():
-        team_strength_df = pd.read_csv(f'./elevenify/elev_{current_gw_id+1}.csv', sep=',', header=0)
+        team_strength_df = pd.read_csv(f'./elevenify/elev_{gw_id}.csv', sep=',', header=0)
         team_strength_df = trim_df(team_strength_column_map, team_strength_df)
         return team_strength_df
 
     try:
         team_strength_df = build_df()
     except KeyError:
-        format_elevenify_data(current_gw_id+1)
+        format_elevenify_data(gw_id)
         team_strength_df = build_df()
-
-    # strength_columns = team_strength_column_map.values()
-    # for col in strength_columns:
-    #     team_strength_df[col] = team_strength_df.apply(lambda row: format_elevenify_data(row, col), axis=1)
 
     return team_strength_df
 
@@ -378,7 +375,6 @@ def scrape_html(tag: str | element.Tag, table_id: str, return_url: bool = False)
         r = session.get(fbref_host + url)
         response_html = r.content.decode("utf-8", errors="ignore")
     except:
-        print()
         raise Exception(f"Unable to obtain response from FBRef at URL {str(fbref_host) + str(url)}. Check internet connection.")
 
     # Create Soup object
@@ -603,9 +599,10 @@ def update_team_strengths(gw_id: int):
 
     """Update team strengths for given squad and gameweek."""
 
+    team_strengths_df = get_elevenify_data(gw_id)
+    team_strengths_df['squad_id'] = team_strengths_df.apply(lambda row: get_squad_id(row, source='elevenify'), axis=1)
+
     for squad_id in range(1, 21):
-        team_strengths_df = get_elevenify_data()
-        team_strengths_df.insert(0, 'squad_id', list(range(1, len(team_strengths_df.index)+1)))
         team_strength_df = team_strengths_df.loc[team_strengths_df['squad_id'] == squad_id]
         team_strength_df = team_strength_df.reset_index()
         args = [
@@ -694,7 +691,7 @@ def update_player_gameweek(player_gws_df: pd.DataFrame):
     # execute_from_file('delete_duplicates_player_gameweek.sql', tuple())
 
 
-def update_projected_points(gw_id: int):
+def update_projected_points(gw_id: int = current_gw_id+1):
 
     """Update projected points after changes to model."""
 
@@ -767,9 +764,8 @@ def update_my_team():
 
 
 if __name__ == '__main__':
-    # post_gameweek_update()
-    # update_team_strengths(3)
-    update_projected_points(3)
+    post_gameweek_update()
+    # update_projected_points()
     # update_my_team()
     # bulk_update()
     

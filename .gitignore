@@ -188,5 +188,5 @@ players.csv
 train.csv
 
 # Debug
-debug_output.txt
+debug_output.log
 tmp/
